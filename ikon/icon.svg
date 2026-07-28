@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="KASA">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6b6bf0"/>
+      <stop offset="1" stop-color="#9b5bd6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#g)"/>
+  <!-- kasa kapagi / ikinci beyin: cember + kollar -->
+  <circle cx="256" cy="256" r="118" fill="none" stroke="#fff" stroke-width="26" opacity=".95"/>
+  <circle cx="256" cy="256" r="34" fill="#fff"/>
+  <g stroke="#fff" stroke-width="26" stroke-linecap="round" opacity=".95">
+    <path d="M256 84v54"/>
+    <path d="M256 374v54"/>
+    <path d="M84 256h54"/>
+    <path d="M374 256h54"/>
+  </g>
+</svg>

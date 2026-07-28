@@ -1,0 +1,20 @@
+{
+  "name": "KASA",
+  "short_name": "KASA",
+  "description": "KASA ikinci beyin — günlük plan, haftalık plan, takvim ve biriken işler",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0e11",
+  "theme_color": "#5b5bd6",
+  "categories": ["productivity"],
+  "icons": [
+    { "src": "ikon/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "ikon/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

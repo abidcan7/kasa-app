@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#5b5bd6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0f12" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KASA">
+<title>KASA</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikon/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="ikon/icon-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header id="ustBar">
+  <div class="ust-sol">
+    <h1 id="baslik">Bugün</h1>
+    <div id="altBaslik" class="alt-baslik"></div>
+  </div>
+  <div class="ust-sag">
+    <button id="senkronBtn" class="ikon-btn" aria-label="Senkronize et" title="Senkronize et">
+      <svg viewBox="0 0 24 24" class="ikon"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+    </button>
+    <button id="ayarBtn" class="ikon-btn" aria-label="Ayarlar" title="Ayarlar">
+      <svg viewBox="0 0 24 24" class="ikon"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.43.65.79.79H21a2 2 0 1 1 0 4h-.09c-.36.14-.65.43-.79.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div id="senkronSerit" class="senkron-serit gizli"></div>
+
+<main id="icerik"><div class="yukleniyor">Yükleniyor…</div></main>
+
+<nav id="altNav">
+  <button data-gorunum="bugun"   class="aktif"><svg viewBox="0 0 24 24" class="nav-ikon"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Bugün</span></button>
+  <button data-gorunum="hafta"><svg viewBox="0 0 24 24" class="nav-ikon"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Hafta</span></button>
+  <button data-gorunum="yakala" class="yakala-btn" aria-label="Hızlı yakala"><svg viewBox="0 0 24 24" class="nav-ikon-buyuk"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button data-gorunum="takvim"><svg viewBox="0 0 24 24" class="nav-ikon"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Takvim</span></button>
+  <button data-gorunum="biriken"><svg viewBox="0 0 24 24" class="nav-ikon"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><span>Biriken</span></button>
+</nav>
+
+<!-- ---------------- Hizli yakala sayfasi ---------------- -->
+<div id="yakalaKatman" class="katman gizli">
+  <div class="katman-arka" data-kapat></div>
+  <div class="sayfa">
+    <div class="sayfa-tut"></div>
+    <div class="sayfa-basliklar">
+      <button class="sekme aktif" data-sekme="not">Not</button>
+      <button class="sekme" data-sekme="gorev">Görev</button>
+      <button class="sekme" data-sekme="etkinlik">Etkinlik</button>
+    </div>
+
+    <div class="sekme-icerik" data-icerik="not">
+      <textarea id="yakalaNot" rows="5" placeholder="Aklından geçeni yaz — bugünün notuna düşer, Claude doğru yere dağıtır…"></textarea>
+      <button class="birincil" id="notKaydet">Nota ekle</button>
+    </div>
+
+    <div class="sekme-icerik gizli" data-icerik="gorev">
+      <input id="yakalaGorev" type="text" placeholder="Görev metni">
+      <div class="satir-alanlar">
+        <input id="yakalaGorevTarih" type="date">
+        <input id="yakalaGorevSure" type="text" placeholder="~30dk" inputmode="text">
+      </div>
+      <input id="yakalaGorevProje" type="text" placeholder="Proje (Ferrini, Packt, Kuşadası…)" list="projeListesi">
+      <datalist id="projeListesi"></datalist>
+      <button class="birincil" id="gorevKaydet">Görev ekle</button>
+    </div>
+
+    <div class="sekme-icerik gizli" data-icerik="etkinlik">
+      <input id="yakalaEtkinlik" type="text" placeholder="Etkinlik adı">
+      <div class="satir-alanlar">
+        <input id="yakalaEtkinlikTarih" type="date">
+        <input id="yakalaEtkinlikSaat" type="time">
+      </div>
+      <button class="birincil" id="etkinlikKaydet">Takvime ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------- Ayarlar sayfasi ---------------- -->
+<div id="ayarKatman" class="katman gizli">
+  <div class="katman-arka" data-kapat></div>
+  <div class="sayfa">
+    <div class="sayfa-tut"></div>
+    <h2>Ayarlar</h2>
+
+    <label class="alan-etiket">GitHub kullanıcı adı</label>
+    <input id="ayarOwner" type="text" autocapitalize="off" autocorrect="off" spellcheck="false">
+
+    <label class="alan-etiket">Veri deposu (private repo)</label>
+    <input id="ayarRepo" type="text" autocapitalize="off" autocorrect="off" spellcheck="false">
+
+    <label class="alan-etiket">Erişim anahtarı (fine-grained PAT)</label>
+    <input id="ayarToken" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_…">
+    <p class="ipucu">Anahtar yalnızca bu telefonda saklanır, hiçbir yere gönderilmez. Yalnızca <b>Contents: Read&nbsp;and&nbsp;write</b> izni yeter, sadece veri deposu için.</p>
+
+    <button class="birincil" id="ayarKaydet">Kaydet ve bağlan</button>
+    <button class="ikincil" id="ayarYenile">Verileri yeniden çek</button>
+    <button class="tehlike" id="ayarSil">Anahtarı bu cihazdan sil</button>
+
+    <div id="ayarDurum" class="ayar-durum"></div>
+  </div>
+</div>
+
+<!-- ---------------- Gorev detay sayfasi ---------------- -->
+<div id="gorevKatman" class="katman gizli">
+  <div class="katman-arka" data-kapat></div>
+  <div class="sayfa" id="gorevSayfa"></div>
+</div>
+
+<div id="bildirim" class="bildirim gizli"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
