@@ -6,12 +6,12 @@
    YENİ html eşleşip düzen bozulabiliyor (28.07'de bir kez yaşandı). index.html'deki
    `?s=` sorgu parametresi de aynı sayıyla güncellenir. */
 
-const SURUM = 'kasa-v6';
+const SURUM = 'kasa-v7';
 const KABUK = [
   './',
   './index.html',
-  './app.css?s=6',
-  './app.js?s=6',
+  './app.css?s=7',
+  './app.js?s=7',
   './manifest.webmanifest',
   './ikon/icon.svg'
 ];

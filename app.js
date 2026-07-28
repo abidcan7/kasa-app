@@ -325,7 +325,13 @@ const Senkron = {
         await GH.olayYaz(olay);
         Gelen.durumYaz(olay.id, 'gonderildi');
       }
-      catch (e) { kalan.push(olay); }
+      catch (e) {
+        // 422 = dosya zaten var → olay ASLINDA teslim edilmiş demektir.
+        // Bunu hata sayıp kuyrukta tutmak, olayın ileride tekrar yüklenmesine
+        // ve vault'ta çift işlenmeye yol açıyordu (28.07'de yaşandı).
+        if (e.kod === 422) { Gelen.durumYaz(olay.id, 'gonderildi'); continue; }
+        kalan.push(olay);
+      }
     }
     D.kuyruk = kalan;
     Depo.yaz('kuyruk', D.kuyruk);
@@ -858,7 +864,7 @@ const AyarSayfasi = {
     const dokunmatik = window.matchMedia('(pointer: coarse)').matches;
     const masaustuDuzen = window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)').matches;
     s.push('<br><b>Teşhis</b>');
-    s.push('Arayüz sürümü: <b>s=6</b>');
+    s.push('Arayüz sürümü: <b>s=7</b>');
     s.push('Viewport: <b>' + gen + 'px</b>' + (gen > 700 && dokunmatik ? ' ⚠️ (telefonda beklenen ~400px — Chrome “Masaüstü sitesi” açık olabilir)' : ''));
     s.push('Giriş: ' + (dokunmatik ? 'dokunmatik' : 'fare') + ' · Düzen: ' + (masaustuDuzen ? 'masaüstü' : 'mobil'));
     return s.join('<br>');
