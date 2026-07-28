@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="ikon/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="ikon/icon-180.png">
-<link rel="stylesheet" href="app.css?s=4">
+<link rel="stylesheet" href="app.css?s=5">
 </head>
 <body>
 
@@ -146,6 +146,15 @@
     <div class="sayfa-tut"></div>
     <div class="sayfa-ust"><h2>Ayarlar</h2><button class="kapat-btn" data-kapat aria-label="Kapat">✕</button></div>
 
+    <span class="alan-etiket">Arayüz boyutu</span>
+    <div class="olcek-secim" id="olcekSecim">
+      <button data-olcek="1">Normal</button>
+      <button data-olcek="1.2">Büyük</button>
+      <button data-olcek="1.4">Daha büyük</button>
+      <button data-olcek="1.65">Devasa</button>
+    </div>
+    <p class="ipucu">Tüm arayüz orantılı büyür — yazı, düğme, ikon, boşluk. İstediğin gibi dene, anında uygulanır.</p>
+
     <label class="alan"><span class="alan-etiket">GitHub kullanıcı adı</span>
       <input id="ayarOwner" type="text" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
     <label class="alan"><span class="alan-etiket">Veri deposu (private)</span>
@@ -171,6 +180,6 @@
 
 <div id="bildirim" class="bildirim gizli"></div>
 
-<script src="app.js?s=4"></script>
+<script src="app.js?s=5"></script>
 </body>
 </html>

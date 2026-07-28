@@ -657,14 +657,30 @@ function cizBiriken() {
   return h || bosDurum('🎉', 'Biriken iş kalmadı', '');
 }
 
+/* soyut geometrik kompozisyon — boş ekranlar tatsız durmasın */
+const BOS_SEKIL =
+  '<svg class="bos-sekil" viewBox="0 0 200 130" aria-hidden="true">' +
+    '<defs>' +
+      '<linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0" stop-color="var(--vurgu)"/><stop offset="1" stop-color="var(--vurgu-2)"/></linearGradient>' +
+      '<linearGradient id="bg2" x1="1" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="var(--vurgu-2)"/><stop offset="1" stop-color="#f0709a"/></linearGradient>' +
+    '</defs>' +
+    '<circle cx="72" cy="62" r="34" fill="url(#bg1)" opacity=".85"/>' +
+    '<rect x="96" y="30" width="58" height="58" rx="16" fill="url(#bg2)" opacity=".62"/>' +
+    '<circle cx="140" cy="88" r="19" fill="none" stroke="url(#bg1)" stroke-width="5" opacity=".75"/>' +
+    '<path d="M28 96 L58 44 L88 96 Z" fill="none" stroke="url(#bg2)" stroke-width="4.5" stroke-linejoin="round" opacity=".55"/>' +
+  '</svg>';
+
 function bosDurum(ikon, baslik, alt) {
-  return '<div class="bos-durum"><span class="buyuk">' + ikon + '</span><b>' + kacir(baslik) + '</b>' +
-         (alt ? '<div style="margin-top:6px;font-size:14px">' + kacir(alt) + '</div>' : '') + '</div>';
+  return '<div class="bos-durum">' + BOS_SEKIL +
+         '<b>' + kacir(baslik) + '</b>' +
+         (alt ? '<div>' + kacir(alt) + '</div>' : '') + '</div>';
 }
 
 /* ------------------------------------------------------------------- çizim */
 
-const BASLIKLAR = { bugun: 'Bugün', hafta: 'Hafta', takvim: 'Takvim', biriken: 'Biriken', gelen: 'Gelen kutusu' };
+const BASLIKLAR = { bugun: 'Bugün', hafta: 'Hafta', takvim: 'Takvim', biriken: 'Biriken', gelen: 'Gelen' };
 
 function ciz() {
   const g = D.gorunum;
@@ -673,7 +689,7 @@ function ciz() {
   let alt = '';
   if (g === 'bugun' && D.veri.bugun) alt = D.veri.bugun.tarih + ' ' + (D.veri.bugun.gunAdi || '');
   else if (g === 'hafta' && D.veri.hafta) alt = (D.veri.hafta.baslangic || '') + ' → ' + (D.veri.hafta.bitis || '');
-  else if (g === 'gelen') alt = 'aklına geleni yakala — Claude doğru yere dağıtır';
+  else if (g === 'gelen') alt = 'yakala, Claude dağıtsın';
   else if (D.sonCekme) alt = 'son senkron ' + new Date(D.sonCekme).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   $('#altBaslik').textContent = alt;
 
@@ -805,11 +821,26 @@ const Katman = {
   kapat() { $$('.katman').forEach(k => k.classList.add('gizli')); }
 };
 
+/* ---------------------------------------------------------------- ölçek */
+/* Tüm arayüzü orantılı büyütür (yazı + düğme + boşluk). `zoom`, düzeni
+   yeniden akıttığı için transform:scale'den farklı olarak taşma yaratmaz. */
+const Olcek = {
+  uygula(deger) {
+    const d = parseFloat(deger) || 1;
+    document.documentElement.style.zoom = d === 1 ? '' : String(d);
+    Depo.yaz('olcek', d);
+    $$('#olcekSecim button').forEach(b => b.classList.toggle('aktif', parseFloat(b.dataset.olcek) === d));
+  },
+  baslat() { this.uygula(Depo.al('olcek', 1.2)); }
+};
+
 const AyarSayfasi = {
   ac(mesaj) {
     $('#ayarOwner').value = Ayar.owner;
     $('#ayarRepo').value  = Ayar.repo;
     $('#ayarToken').value = Ayar.token;
+    const d = Depo.al('olcek', 1.2);
+    $$('#olcekSecim button').forEach(b => b.classList.toggle('aktif', parseFloat(b.dataset.olcek) === d));
     $('#ayarDurum').innerHTML = mesaj ? kacir(mesaj) : this.ozet();
     $('#ayarKatman').classList.remove('gizli');
   },
@@ -826,7 +857,7 @@ const AyarSayfasi = {
     const dokunmatik = window.matchMedia('(pointer: coarse)').matches;
     const masaustuDuzen = window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)').matches;
     s.push('<br><b>Teşhis</b>');
-    s.push('Arayüz sürümü: <b>s=4</b>');
+    s.push('Arayüz sürümü: <b>s=5</b>');
     s.push('Viewport: <b>' + gen + 'px</b>' + (gen > 700 && dokunmatik ? ' ⚠️ (telefonda beklenen ~400px — Chrome “Masaüstü sitesi” açık olabilir)' : ''));
     s.push('Giriş: ' + (dokunmatik ? 'dokunmatik' : 'fare') + ' · Düzen: ' + (masaustuDuzen ? 'masaüstü' : 'mobil'));
     return s.join('<br>');
@@ -998,6 +1029,11 @@ function baglaOlaylar() {
     }
   };
 
+  $$('#olcekSecim button').forEach(b => b.onclick = () => {
+    Olcek.uygula(b.dataset.olcek);
+    bildir('Boyut: ' + b.textContent);
+  });
+
   $('#ayarYenile').onclick = () => { Katman.kapat(); Senkron.cek(); };
 
   $('#ayarSil').onclick = () => {
@@ -1017,6 +1053,7 @@ function baglaOlaylar() {
 /* ------------------------------------------------------------------ başlat */
 
 function baslat() {
+  Olcek.baslat();
   baglaOlaylar();
   ciz();
 
