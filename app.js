@@ -36,6 +36,7 @@ const D = {
   gorunum: 'bugun',
   veri: Depo.al('veri', {}),
   kuyruk: Depo.al('kuyruk', []),
+  gecmis: Depo.al('gecmis', []), // gelen kutusuna yakalananlar (kart listesi)
   yerel: Depo.al('yerel', {}),   // henüz işlenmemiş yerel durum değişiklikleri
   sonCekme: Depo.al('sonCekme', null),
   senkronda: false
@@ -124,6 +125,153 @@ const GH = {
         branch: Ayar.dal
       }
     });
+  },
+
+  /* ikili dosya (foto / ses / pdf) yükler — içerik zaten base64 */
+  async dosyaYaz(yol, base64Icerik, mesaj) {
+    await this.istek('/contents/' + yol, {
+      method: 'PUT',
+      body: { message: mesaj || ('mobil ek: ' + yol), content: base64Icerik, branch: Ayar.dal }
+    });
+  }
+};
+
+/* ------------------------------------------------------------- medya araçları */
+
+function dosyaOku(dosya) {
+  return new Promise((coz, red) => {
+    const fr = new FileReader();
+    fr.onload = () => coz(fr.result);
+    fr.onerror = red;
+    fr.readAsDataURL(dosya);
+  });
+}
+
+function veriUrlAyir(veriUrl) {
+  const i = veriUrl.indexOf(',');
+  return veriUrl.slice(i + 1);           // yalnızca base64 gövdesi
+}
+
+/* Telefon fotoğrafları 3-5 MB gelir; yüklemeden önce küçültülür.
+   Böylece mobil veriyle de hızlı gider ve depo şişmez. */
+function gorseliKucult(dosya, maxKenar, kalite) {
+  maxKenar = maxKenar || 1600; kalite = kalite || 0.82;
+  return new Promise((coz) => {
+    const url = URL.createObjectURL(dosya);
+    const img = new Image();
+    img.onload = () => {
+      let { width: g, height: y } = img;
+      const oran = Math.min(1, maxKenar / Math.max(g, y));
+      g = Math.round(g * oran); y = Math.round(y * oran);
+      const c = document.createElement('canvas');
+      c.width = g; c.height = y;
+      c.getContext('2d').drawImage(img, 0, 0, g, y);
+      URL.revokeObjectURL(url);
+      coz(c.toDataURL('image/jpeg', kalite));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); coz(null); };
+    img.src = url;
+  });
+}
+
+const Ekler = {
+  liste: [],   // { ad, tur, uzanti, base64, onizleme }
+
+  async dosyaEkle(dosya) {
+    let base64, uzanti, tur, onizleme = null;
+    if (dosya.type.startsWith('image/')) {
+      const kucuk = await gorseliKucult(dosya);
+      const veriUrl = kucuk || (await dosyaOku(dosya));
+      base64 = veriUrlAyir(veriUrl);
+      onizleme = veriUrl; uzanti = 'jpg'; tur = 'foto';
+    } else {
+      base64 = veriUrlAyir(await dosyaOku(dosya));
+      uzanti = (dosya.name.split('.').pop() || 'bin').toLowerCase();
+      tur = 'dosya';
+    }
+    this.liste.push({ ad: dosya.name || ('ek.' + uzanti), tur, uzanti, base64, onizleme });
+    this.ciz();
+  },
+
+  sesEkle(base64, saniye) {
+    this.liste.push({ ad: 'sesli-not-' + saniye + 'sn.webm', tur: 'ses', uzanti: 'webm', base64, onizleme: null });
+    this.ciz();
+  },
+
+  sil(i) { this.liste.splice(i, 1); this.ciz(); },
+  temizle() { this.liste = []; this.ciz(); },
+
+  ciz() {
+    const el = $('#ekListesi');
+    if (!el) return;
+    el.innerHTML = this.liste.map((e, i) => {
+      const ikon = e.tur === 'foto' ? '🖼️' : (e.tur === 'ses' ? '🎤' : '📄');
+      const gor = e.onizleme ? '<img src="' + e.onizleme + '" alt="">' : '<span>' + ikon + '</span>';
+      const kb = Math.round(e.base64.length * 0.75 / 1024);
+      return '<span class="ek-fis">' + gor +
+             '<span class="ad">' + kacir(e.ad) + '</span>' +
+             '<span style="opacity:.7">' + kb + 'KB</span>' +
+             '<button class="sil" data-ek="' + i + '" aria-label="Kaldır">✕</button></span>';
+    }).join('');
+    $$('.ek-fis .sil', el).forEach(b => b.onclick = () => this.sil(parseInt(b.dataset.ek, 10)));
+  },
+
+  /* Ekleri GitHub'a yükler, olayda kullanılacak yol listesini döndürür */
+  async yukle(zamanDamgasi) {
+    const sonuc = [];
+    for (let i = 0; i < this.liste.length; i++) {
+      const e = this.liste[i];
+      const yol = 'inbox/ekler/' + zamanDamgasi + '-' + (i + 1) + '.' + e.uzanti;
+      await GH.dosyaYaz(yol, e.base64, 'mobil ek: ' + e.ad);
+      sonuc.push({ ad: e.ad, yol: yol, tur: e.tur });
+    }
+    return sonuc;
+  }
+};
+
+const SesKaydi = {
+  kaydedici: null, parcalar: [], baslangic: 0, sayac: null,
+
+  async basla() {
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      bildir('Bu tarayıcı ses kaydını desteklemiyor'); return;
+    }
+    try {
+      const akis = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.parcalar = [];
+      this.kaydedici = new MediaRecorder(akis);
+      this.kaydedici.ondataavailable = ev => { if (ev.data.size) this.parcalar.push(ev.data); };
+      this.kaydedici.onstop = () => akis.getTracks().forEach(t => t.stop());
+      this.kaydedici.start();
+      this.baslangic = Date.now();
+      $('#kayitPanel').classList.remove('gizli');
+      $('#ekSes').classList.add('etkin');
+      this.sayac = setInterval(() => {
+        const s = Math.floor((Date.now() - this.baslangic) / 1000);
+        $('#kayitSure').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+      }, 250);
+    } catch (e) {
+      bildir('Mikrofon izni verilmedi');
+    }
+  },
+
+  bitir(kaydet) {
+    if (!this.kaydedici) return;
+    const sure = Math.max(1, Math.round((Date.now() - this.baslangic) / 1000));
+    clearInterval(this.sayac);
+    this.kaydedici.onstop = async () => {
+      if (kaydet && this.parcalar.length) {
+        const blob = new Blob(this.parcalar, { type: 'audio/webm' });
+        Ekler.sesEkle(veriUrlAyir(await dosyaOku(blob)), sure);
+        bildir('Sesli not eklendi (' + sure + 'sn)');
+      }
+      this.parcalar = [];
+    };
+    try { this.kaydedici.stop(); } catch (e) {}
+    this.kaydedici = null;
+    $('#kayitPanel').classList.add('gizli');
+    $('#ekSes').classList.remove('etkin');
+    $('#kayitSure').textContent = '0:00';
   }
 };
 
@@ -155,6 +303,7 @@ const Senkron = {
       D.sonCekme = new Date().toISOString();
       Depo.yaz('veri', D.veri);
       Depo.yaz('sonCekme', D.sonCekme);
+      Gelen.isleniyorMu();     // vault'a işlenmiş yakalamaları "işlendi" işaretle
       ciz();
       bildir('Güncel');
     } catch (e) {
@@ -171,7 +320,10 @@ const Senkron = {
     if (!D.kuyruk.length) return;
     const kalan = [];
     for (const olay of D.kuyruk) {
-      try { await GH.olayYaz(olay); }
+      try {
+        await GH.olayYaz(olay);
+        Gelen.durumYaz(olay.id, 'gonderildi');
+      }
       catch (e) { kalan.push(olay); }
     }
     D.kuyruk = kalan;
@@ -218,6 +370,68 @@ function serit() {
   else satir.push('<b>Güncel</b>');
   if (D.sonCekme) satir.push('son senkron ' + new Date(D.sonCekme).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }));
   yd.innerHTML = satir.join('<br>');
+}
+
+/* ------------------------------------------------------------- gelen kutusu */
+
+const TUR_IKON = { not: '📝', sonuc: '✅', fikir: '💡', arastir: '🔍', gorev: '☑️', etkinlik: '📅', mesaj: '💬' };
+
+const Gelen = {
+  ekle(olayId, tur, metin, ekler) {
+    D.gecmis.unshift({
+      olayId: olayId, ts: new Date().toISOString(),
+      tur: tur, metin: metin, ekler: ekler || [], durum: 'bekliyor'
+    });
+    if (D.gecmis.length > 80) D.gecmis.length = 80;   // yerel geçmişi sınırla
+    Depo.yaz('gecmis', D.gecmis);
+  },
+
+  durumYaz(olayId, durum) {
+    const k = D.gecmis.find(x => x.olayId === olayId);
+    if (k && k.durum !== 'islendi') { k.durum = durum; Depo.yaz('gecmis', D.gecmis); }
+  },
+
+  /* Vault'tan yeni veri geldiğinde: metni günlük notta bulduysak "işlendi" say */
+  isleniyorMu() {
+    const notlar = (D.veri.bugun && D.veri.bugun.gunIciNotlar) || [];
+    if (!notlar.length) return;
+    let degisti = false;
+    D.gecmis.forEach(k => {
+      if (k.durum === 'islendi' || !k.metin) return;
+      const parca = k.metin.trim().slice(0, 24).toLowerCase();
+      if (parca.length < 6) return;
+      if (notlar.some(n => (n.metin || '').toLowerCase().includes(parca))) { k.durum = 'islendi'; degisti = true; }
+    });
+    if (degisti) Depo.yaz('gecmis', D.gecmis);
+  }
+};
+
+function cizGelen() {
+  if (!D.gecmis.length) {
+    return bosDurum('📥', 'Gelen kutusu boş',
+      'Yukarıdan aklına geleni yaz. Not, yapıldı kaydı, fikir, fotoğraf, sesli not — hepsi buraya düşer, Claude doğru yere dağıtır.');
+  }
+  const rozetAd = { bekliyor: 'bekliyor', gonderildi: 'gönderildi', islendi: 'işlendi' };
+  let h = '<div class="bolum-bas">Yakaladıklarım<span class="sayi">' + D.gecmis.length + '</span></div>';
+  D.gecmis.forEach(k => {
+    const t = new Date(k.ts);
+    const zaman = t.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }) + ' · ' +
+                  t.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    h += '<div class="gelen-kart">' +
+      '<div class="gelen-ust">' +
+        '<span class="gelen-tur">' + (TUR_IKON[k.tur] || '📝') + '</span>' +
+        '<span class="gelen-zaman">' + kacir(zaman) + '</span>' +
+        '<span class="gelen-rozet ' + k.durum + '">' + (rozetAd[k.durum] || k.durum) + '</span>' +
+      '</div>' +
+      (k.metin ? '<div class="gelen-metin">' + kacir(k.metin) + '</div>' : '') +
+      ((k.ekler || []).length
+        ? '<div class="gelen-ekler">' + k.ekler.map(e =>
+            '<span class="gelen-ek">' + (e.tur === 'foto' ? '🖼️' : e.tur === 'ses' ? '🎤' : '📄') + ' ' + kacir(e.ad) + '</span>'
+          ).join('') + '</div>'
+        : '') +
+    '</div>';
+  });
+  return h;
 }
 
 /* ---------------------------------------------------------- durum yönetimi */
@@ -450,7 +664,7 @@ function bosDurum(ikon, baslik, alt) {
 
 /* ------------------------------------------------------------------- çizim */
 
-const BASLIKLAR = { bugun: 'Bugün', hafta: 'Hafta', takvim: 'Takvim', biriken: 'Biriken' };
+const BASLIKLAR = { bugun: 'Bugün', hafta: 'Hafta', takvim: 'Takvim', biriken: 'Biriken', gelen: 'Gelen kutusu' };
 
 function ciz() {
   const g = D.gorunum;
@@ -459,14 +673,19 @@ function ciz() {
   let alt = '';
   if (g === 'bugun' && D.veri.bugun) alt = D.veri.bugun.tarih + ' ' + (D.veri.bugun.gunAdi || '');
   else if (g === 'hafta' && D.veri.hafta) alt = (D.veri.hafta.baslangic || '') + ' → ' + (D.veri.hafta.bitis || '');
+  else if (g === 'gelen') alt = 'aklına geleni yakala — Claude doğru yere dağıtır';
   else if (D.sonCekme) alt = 'son senkron ' + new Date(D.sonCekme).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   $('#altBaslik').textContent = alt;
+
+  /* besteci yalnızca Gelen kutusunda görünür (kalıcı DOM — yazılan metin kaybolmaz) */
+  $('#besteci').classList.toggle('gizli', g !== 'gelen');
 
   let h = '';
   if (g === 'bugun') h = cizBugun();
   else if (g === 'hafta') h = cizHafta();
   else if (g === 'takvim') h = cizTakvim();
   else if (g === 'biriken') h = cizBiriken();
+  else if (g === 'gelen') h = cizGelen();
   $('#icerik').innerHTML = h;
 
   $$('#anaNav button').forEach(b => b.classList.toggle('aktif', b.dataset.gorunum === g));
@@ -609,10 +828,10 @@ const AyarSayfasi = {
 
 function baglaOlaylar() {
   $$('#anaNav button').forEach(b => b.onclick = () => {
-    if (b.dataset.gorunum === 'yakala') { $('#yakalaKatman').classList.remove('gizli'); return; }
     D.gorunum = b.dataset.gorunum;
     window.scrollTo(0, 0);
     ciz();
+    if (D.gorunum === 'gelen') setTimeout(() => { const t = $('#yakalaNot'); if (t) t.focus(); }, 120);
   });
 
   $('#senkronBtn').onclick = () => Senkron.cek();
@@ -660,27 +879,86 @@ function baglaOlaylar() {
     $$('.sekme-icerik').forEach(x => x.classList.toggle('gizli', x.dataset.icerik !== s.dataset.sekme));
   });
 
-  $('#notKaydet').onclick = () => {
+  /* ---- gelen kutusu: tür seçici ---- */
+  let seciliTur = 'not';
+  $$('#turSecim .tur').forEach(t => t.onclick = () => {
+    seciliTur = t.dataset.tur;
+    $$('#turSecim .tur').forEach(x => x.classList.toggle('aktif', x === t));
+  });
+
+  /* ---- gelen kutusu: ekler ---- */
+  $('#ekKamera').onclick = () => $('#dosyaKamera').click();
+  $('#ekGaleri').onclick = () => $('#dosyaGaleri').click();
+
+  const dosyaAl = async (girdi) => {
+    for (const d of Array.from(girdi.files || [])) {
+      try { await Ekler.dosyaEkle(d); }
+      catch (e) { bildir('Dosya okunamadı: ' + d.name); }
+    }
+    girdi.value = '';
+  };
+  $('#dosyaKamera').onchange = ev => dosyaAl(ev.target);
+  $('#dosyaGaleri').onchange = ev => dosyaAl(ev.target);
+
+  $('#ekSes').onclick = () => { if (SesKaydi.kaydedici) SesKaydi.bitir(true); else SesKaydi.basla(); };
+  $('#kayitDur').onclick = () => SesKaydi.bitir(true);
+  $('#kayitIptal').onclick = () => SesKaydi.bitir(false);
+
+  $('#ekLink').onclick = () => {
+    const u = prompt('Bağlantı (URL):');
+    if (!u) return;
+    const el = $('#yakalaNot');
+    el.value = (el.value ? el.value.trimEnd() + '\n' : '') + u.trim();
+    el.focus();
+  };
+
+  /* ---- gelen kutusu: kaydet ---- */
+  $('#notKaydet').onclick = async () => {
     const el = $('#yakalaNot');
     const m = el.value.trim();
-    if (!m) return;
-    Senkron.gonder('not_ekle', { metin: m, tarih: bugunISO() });
+    if (!m && !Ekler.liste.length) { bildir('Önce bir şeyler yaz veya ek koy'); return; }
+
+    const btn = $('#notKaydet');
+    let ekYollari = [];
+    if (Ekler.liste.length) {
+      if (!navigator.onLine || !Ayar.kurulu()) {
+        bildir('Ek göndermek için bağlantı gerekiyor'); return;
+      }
+      btn.disabled = true; btn.textContent = 'Ekler yükleniyor…';
+      try {
+        ekYollari = await Ekler.yukle(new Date().toISOString().replace(/[:.]/g, '-'));
+      } catch (e) {
+        btn.disabled = false; btn.textContent = 'Gelen kutusuna ekle';
+        bildir('Ek yüklenemedi: ' + e.message); return;
+      }
+      btn.disabled = false; btn.textContent = 'Gelen kutusuna ekle';
+    }
+
+    const olay = Senkron.gonder('not_ekle', {
+      metin: m, tur: seciliTur, tarih: bugunISO(), ekler: ekYollari
+    });
+    Gelen.ekle(olay.id, seciliTur, m, ekYollari);
+
     el.value = '';
-    Katman.kapat();
-    bildir('Not alındı — Claude doğru yere dağıtacak');
+    Ekler.temizle();
+    if (D.gorunum !== 'gelen') { D.gorunum = 'gelen'; }
+    ciz();
+    bildir('Gelen kutusuna eklendi');
   };
 
   $('#gorevKaydet').onclick = () => {
     const m = $('#yakalaGorev').value.trim();
     if (!m) return;
-    Senkron.gonder('gorev_ekle', {
+    const veri = {
       metin: m,
       tarih: $('#yakalaGorevTarih').value || bugunISO(),
       sure: $('#yakalaGorevSure').value.trim() || null,
       proje: $('#yakalaGorevProje').value.trim() || null
-    });
+    };
+    const olay = Senkron.gonder('gorev_ekle', veri);
+    Gelen.ekle(olay.id, 'gorev', m + (veri.proje ? ' · ' + veri.proje : '') + ' · ' + veri.tarih, []);
     $('#yakalaGorev').value = ''; $('#yakalaGorevSure').value = ''; $('#yakalaGorevProje').value = '';
-    Katman.kapat();
+    ciz();
     bildir('Görev eklendi');
   };
 
@@ -688,9 +966,11 @@ function baglaOlaylar() {
     const m = $('#yakalaEtkinlik').value.trim();
     const t = $('#yakalaEtkinlikTarih').value;
     if (!m || !t) { bildir('Ad ve tarih gerekli'); return; }
-    Senkron.gonder('etkinlik_ekle', { baslik: m, tarih: t, saat: $('#yakalaEtkinlikSaat').value || null });
+    const saat = $('#yakalaEtkinlikSaat').value || null;
+    const olay = Senkron.gonder('etkinlik_ekle', { baslik: m, tarih: t, saat: saat });
+    Gelen.ekle(olay.id, 'etkinlik', m + ' · ' + t + (saat ? ' ' + saat : ''), []);
     $('#yakalaEtkinlik').value = ''; $('#yakalaEtkinlikSaat').value = '';
-    Katman.kapat();
+    ciz();
     bildir('Takvime eklendi');
   };
 

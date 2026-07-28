@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="ikon/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="ikon/icon-180.png">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?s=3">
 </head>
 <body>
 
@@ -35,7 +35,7 @@
         <svg viewBox="0 0 24 24" class="nav-ikon"><rect x="3.2" y="4.6" width="17.6" height="16.2" rx="2.4"/><path d="M16 2.8v3.6M8 2.8v3.6M3.2 10h17.6"/></svg>
         <span>Hafta</span></button>
 
-      <button data-gorunum="yakala" id="yakalaAc" class="yakala">
+      <button data-gorunum="gelen" class="yakala">
         <svg viewBox="0 0 24 24" class="nav-ikon arti"><path d="M12 5.5v13M5.5 12h13"/></svg>
         <span>Yakala</span></button>
 
@@ -69,48 +69,73 @@
     </header>
 
     <div id="senkronSerit" class="senkron-serit gizli"></div>
+
+    <!-- ---------- Gelen Kutusu bestecisi (kalıcı DOM — yazdığın kaybolmaz) ---------- -->
+    <section id="besteci" class="besteci gizli">
+      <div class="sekmeler">
+        <button class="sekme aktif" data-sekme="not">Not</button>
+        <button class="sekme" data-sekme="gorev">Görev</button>
+        <button class="sekme" data-sekme="etkinlik">Etkinlik</button>
+      </div>
+
+      <!-- NOT / LOG -->
+      <div class="sekme-icerik" data-icerik="not">
+        <div class="tur-secim" id="turSecim">
+          <button class="tur aktif" data-tur="not"     title="Serbest not">📝 Not</button>
+          <button class="tur" data-tur="sonuc"         title="Yapıldı / tamamlandı">✅ Yapıldı</button>
+          <button class="tur" data-tur="fikir"         title="Fikir">💡 Fikir</button>
+          <button class="tur" data-tur="arastir"       title="Araştırılacak">🔍 Araştır</button>
+        </div>
+
+        <textarea id="yakalaNot" rows="3" placeholder="Aklından geçeni yaz… “Woodu numuneleri aldım”, “fuar standı için şunu araştır”, aklına gelen her şey."></textarea>
+
+        <div id="ekListesi" class="ek-listesi"></div>
+
+        <div id="kayitPanel" class="kayit-panel gizli">
+          <span class="kayit-nokta"></span>
+          <span id="kayitSure" class="kayit-sure">0:00</span>
+          <button class="kayit-dur" id="kayitDur">Durdur ve ekle</button>
+          <button class="kayit-iptal" id="kayitIptal">İptal</button>
+        </div>
+
+        <div class="ek-araclar">
+          <button class="ek-btn" id="ekKamera"  title="Fotoğraf çek">📷<span>Kamera</span></button>
+          <button class="ek-btn" id="ekGaleri"  title="Görsel/dosya ekle">🖼️<span>Görsel</span></button>
+          <button class="ek-btn" id="ekSes"     title="Sesli not">🎤<span>Ses</span></button>
+          <button class="ek-btn" id="ekLink"    title="Bağlantı ekle">🔗<span>Link</span></button>
+        </div>
+
+        <input type="file" id="dosyaKamera" accept="image/*" capture="environment" class="gizli">
+        <input type="file" id="dosyaGaleri" accept="image/*,application/pdf" multiple class="gizli">
+
+        <button class="birincil" id="notKaydet">Gelen kutusuna ekle</button>
+      </div>
+
+      <!-- GÖREV -->
+      <div class="sekme-icerik gizli" data-icerik="gorev">
+        <input id="yakalaGorev" type="text" placeholder="Görev metni">
+        <div class="satir-alanlar">
+          <label class="alan"><span class="alan-etiket">Tarih</span><input id="yakalaGorevTarih" type="date"></label>
+          <label class="alan"><span class="alan-etiket">Süre</span><input id="yakalaGorevSure" type="text" placeholder="~30dk"></label>
+        </div>
+        <label class="alan"><span class="alan-etiket">Proje</span>
+          <input id="yakalaGorevProje" type="text" placeholder="Ferrini, Packt, Kuşadası…" list="projeListesi"></label>
+        <datalist id="projeListesi"></datalist>
+        <button class="birincil" id="gorevKaydet">Görev ekle</button>
+      </div>
+
+      <!-- ETKİNLİK -->
+      <div class="sekme-icerik gizli" data-icerik="etkinlik">
+        <input id="yakalaEtkinlik" type="text" placeholder="Etkinlik adı">
+        <div class="satir-alanlar">
+          <label class="alan"><span class="alan-etiket">Tarih</span><input id="yakalaEtkinlikTarih" type="date"></label>
+          <label class="alan"><span class="alan-etiket">Saat</span><input id="yakalaEtkinlikSaat" type="time"></label>
+        </div>
+        <button class="birincil" id="etkinlikKaydet">Takvime ekle</button>
+      </div>
+    </section>
+
     <main id="icerik"><div class="yukleniyor"><span class="spin"></span>Yükleniyor…</div></main>
-  </div>
-</div>
-
-<!-- ------------------------------- hızlı yakala ------------------------------- -->
-<div id="yakalaKatman" class="katman gizli" role="dialog" aria-modal="true">
-  <div class="katman-arka" data-kapat></div>
-  <div class="sayfa">
-    <div class="sayfa-tut"></div>
-    <div class="sayfa-ust"><h2>Hızlı yakala</h2><button class="kapat-btn" data-kapat aria-label="Kapat">✕</button></div>
-
-    <div class="sekmeler">
-      <button class="sekme aktif" data-sekme="not">Not</button>
-      <button class="sekme" data-sekme="gorev">Görev</button>
-      <button class="sekme" data-sekme="etkinlik">Etkinlik</button>
-    </div>
-
-    <div class="sekme-icerik" data-icerik="not">
-      <textarea id="yakalaNot" rows="5" placeholder="Aklından geçeni yaz — bugünün notuna düşer, Claude doğru yere dağıtır…"></textarea>
-      <button class="birincil" id="notKaydet">Nota ekle</button>
-    </div>
-
-    <div class="sekme-icerik gizli" data-icerik="gorev">
-      <input id="yakalaGorev" type="text" placeholder="Görev metni">
-      <div class="satir-alanlar">
-        <label class="alan"><span class="alan-etiket">Tarih</span><input id="yakalaGorevTarih" type="date"></label>
-        <label class="alan"><span class="alan-etiket">Süre</span><input id="yakalaGorevSure" type="text" placeholder="~30dk"></label>
-      </div>
-      <label class="alan"><span class="alan-etiket">Proje</span>
-        <input id="yakalaGorevProje" type="text" placeholder="Ferrini, Packt, Kuşadası…" list="projeListesi"></label>
-      <datalist id="projeListesi"></datalist>
-      <button class="birincil" id="gorevKaydet">Görev ekle</button>
-    </div>
-
-    <div class="sekme-icerik gizli" data-icerik="etkinlik">
-      <input id="yakalaEtkinlik" type="text" placeholder="Etkinlik adı">
-      <div class="satir-alanlar">
-        <label class="alan"><span class="alan-etiket">Tarih</span><input id="yakalaEtkinlikTarih" type="date"></label>
-        <label class="alan"><span class="alan-etiket">Saat</span><input id="yakalaEtkinlikSaat" type="time"></label>
-      </div>
-      <button class="birincil" id="etkinlikKaydet">Takvime ekle</button>
-    </div>
   </div>
 </div>
 
@@ -146,6 +171,6 @@
 
 <div id="bildirim" class="bildirim gizli"></div>
 
-<script src="app.js"></script>
+<script src="app.js?s=3"></script>
 </body>
 </html>
