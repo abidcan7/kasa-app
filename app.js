@@ -820,6 +820,15 @@ const AyarSayfasi = {
     if (D.kuyruk.length) s.push('Kuyrukta ' + D.kuyruk.length + ' değişiklik');
     const m = D.veri.meta;
     if (m) s.push('Veri üretimi: ' + new Date(m.uretim).toLocaleString('tr-TR'));
+
+    /* teşhis — düzen sorunlarını uzaktan anlayabilmek için */
+    const gen = document.documentElement.clientWidth;
+    const dokunmatik = window.matchMedia('(pointer: coarse)').matches;
+    const masaustuDuzen = window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)').matches;
+    s.push('<br><b>Teşhis</b>');
+    s.push('Arayüz sürümü: <b>s=4</b>');
+    s.push('Viewport: <b>' + gen + 'px</b>' + (gen > 700 && dokunmatik ? ' ⚠️ (telefonda beklenen ~400px — Chrome “Masaüstü sitesi” açık olabilir)' : ''));
+    s.push('Giriş: ' + (dokunmatik ? 'dokunmatik' : 'fare') + ' · Düzen: ' + (masaustuDuzen ? 'masaüstü' : 'mobil'));
     return s.join('<br>');
   }
 };

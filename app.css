@@ -521,7 +521,11 @@ h1, h2, h3 { margin: 0; font-weight: 680; letter-spacing: -.022em; }
    ≥ 900px — yan panel düzeni (masaüstü/tablet)
    =========================================================================== */
 
-@media (min-width: 900px) {
+/* ⚠️ Yalnızca GERÇEK masaüstünde. Genişlik tek başına yetmez: Chrome'un
+   "Masaüstü sitesi" modu telefonda da ~980px viewport raporlar ve yan panel
+   düzenini tetikler (28.07'de yaşandı). `hover: hover` + `pointer: fine`
+   dokunmatik cihazlarda false döner, böylece telefon her hâlükârda mobil kalır. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
   #kabuk { flex-direction: row; }
 
   #yan {
@@ -584,9 +588,30 @@ h1, h2, h3 { margin: 0; font-weight: 680; letter-spacing: -.022em; }
   .ikon-btn:hover { background: var(--yuzey); color: var(--metin); }
 }
 
-@media (min-width: 1240px) {
+@media (min-width: 1240px) and (hover: hover) and (pointer: fine) {
   .duzen.iki-sutun { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 26px; }
   .gun-izgara { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Dokunmatik cihazda viewport geniş raporlanıyorsa (masaüstü sitesi modu),
+   içerik ortada dar bir sütunda kalsın ve okunaklı büyüklüğü korusun. */
+@media (pointer: coarse) and (min-width: 700px) {
+  html { font-size: 21px; }
+  #icerik, .besteci, .senkron-serit { max-width: 900px; }
+  #baslik { font-size: 40px; }
+  .gorev-metin { font-size: 20px; }
+  .odak .metin { font-size: 21px; }
+  .blok-plan, .hafta-gun li, .bilgi-satir { font-size: 19px; }
+  .takvim-baslik, .oncelik-madde, .gelen-metin { font-size: 19.5px; }
+  .rozet { font-size: 15px; padding: 4px 11px; }
+  .bolum-bas { font-size: 15px; }
+  .kutu { width: 32px; height: 32px; }
+  .kutu svg { width: 18px; height: 18px; }
+  .gorev { padding: 20px 18px; gap: 16px; }
+  #anaNav button { font-size: 14px; min-height: 66px; }
+  .nav-ikon { width: 30px; height: 30px; }
+  #anaNav .yakala .arti { width: 66px; height: 66px; padding: 18px; margin-top: -26px; }
+  #icerik { padding-bottom: calc(146px + var(--guv-alt)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
