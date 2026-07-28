@@ -9,7 +9,8 @@
 
 'use strict';
 
-const VARSAYILAN = { owner: 'abidcan7', repo: 'kasa-veri', dal: 'main' };
+/* olcek: Kadir'in tercihi "Devasa" (28.07) — yeni cihazlarda da bu gelsin */
+const VARSAYILAN = { owner: 'abidcan7', repo: 'kasa-veri', dal: 'main', olcek: 1.65 };
 const DOSYALAR = ['meta', 'bugun', 'hafta', 'takvim', 'biriken', 'durum'];
 
 /* ------------------------------------------------------------------ depo */
@@ -831,7 +832,7 @@ const Olcek = {
     Depo.yaz('olcek', d);
     $$('#olcekSecim button').forEach(b => b.classList.toggle('aktif', parseFloat(b.dataset.olcek) === d));
   },
-  baslat() { this.uygula(Depo.al('olcek', 1.2)); }
+  baslat() { this.uygula(Depo.al('olcek', VARSAYILAN.olcek)); }
 };
 
 const AyarSayfasi = {
@@ -839,7 +840,7 @@ const AyarSayfasi = {
     $('#ayarOwner').value = Ayar.owner;
     $('#ayarRepo').value  = Ayar.repo;
     $('#ayarToken').value = Ayar.token;
-    const d = Depo.al('olcek', 1.2);
+    const d = Depo.al('olcek', VARSAYILAN.olcek);
     $$('#olcekSecim button').forEach(b => b.classList.toggle('aktif', parseFloat(b.dataset.olcek) === d));
     $('#ayarDurum').innerHTML = mesaj ? kacir(mesaj) : this.ozet();
     $('#ayarKatman').classList.remove('gizli');
@@ -857,7 +858,7 @@ const AyarSayfasi = {
     const dokunmatik = window.matchMedia('(pointer: coarse)').matches;
     const masaustuDuzen = window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)').matches;
     s.push('<br><b>Teşhis</b>');
-    s.push('Arayüz sürümü: <b>s=5</b>');
+    s.push('Arayüz sürümü: <b>s=6</b>');
     s.push('Viewport: <b>' + gen + 'px</b>' + (gen > 700 && dokunmatik ? ' ⚠️ (telefonda beklenen ~400px — Chrome “Masaüstü sitesi” açık olabilir)' : ''));
     s.push('Giriş: ' + (dokunmatik ? 'dokunmatik' : 'fare') + ' · Düzen: ' + (masaustuDuzen ? 'masaüstü' : 'mobil'));
     return s.join('<br>');
