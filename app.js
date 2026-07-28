@@ -208,6 +208,16 @@ function serit() {
   } else {
     el.classList.add('gizli');
   }
+
+  /* masaüstü yan panelin dip bilgisi */
+  const yd = $('#yanDurum');
+  if (!yd) return;
+  const satir = [];
+  if (!navigator.onLine) satir.push('<b>Çevrimdışı</b>');
+  else if (D.kuyruk.length) satir.push('<b>' + D.kuyruk.length + '</b> bekliyor');
+  else satir.push('<b>Güncel</b>');
+  if (D.sonCekme) satir.push('son senkron ' + new Date(D.sonCekme).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }));
+  yd.innerHTML = satir.join('<br>');
 }
 
 /* ---------------------------------------------------------- durum yönetimi */
@@ -276,57 +286,64 @@ function blokAktifMi(saat) {
 
 function cizBugun() {
   const b = D.veri.bugun;
-  if (!b) return bosDurum('📭', 'Henüz veri çekilmedi', 'Sağ üstteki yenile düğmesine bas.');
-
-  let h = '';
-  if (b.odak) {
-    h += '<div class="odak"><div class="etiket">Günün tek önemli işi</div>' +
-         '<div class="metin">' + kacir(b.odak) + '</div></div>';
-  }
+  if (!b) return bosDurum('📭', 'Henüz veri çekilmedi', 'Yukarıdaki yenile düğmesine bas.');
 
   const gorevler = b.gorevler || [];
-  const acik = gorevler.filter(g => durumAl(g.id, g.durum) !== 'bitti');
+  const acik  = gorevler.filter(g => durumAl(g.id, g.durum) !== 'bitti');
   const bitti = gorevler.filter(g => durumAl(g.id, g.durum) === 'bitti');
+  const notlar = (b.gunIciNotlar || []).filter(n => n.metin);
+  const bloklar = b.bloklar || [];
 
+  /* --- sol sütun: odak + görevler --- */
+  let sol = '';
+  if (b.odak) {
+    sol += '<div class="odak"><div class="etiket">Günün tek önemli işi</div>' +
+           '<div class="metin">' + kacir(b.odak) + '</div></div>';
+  }
   if (!gorevler.length) {
-    h += bosDurum('🎉', 'Bugün için görev yok', 'Alttaki + ile ekleyebilirsin.');
+    sol += bosDurum('🎉', 'Bugün için görev yok', 'Yakala düğmesiyle ekleyebilirsin.');
   } else {
-    h += '<div class="bolum-bas">Görevler<span class="saat">' + acik.length + ' açık</span></div>';
-    h += '<div class="liste">' + acik.map(gorevKarti).join('') + '</div>';
+    sol += '<div class="bolum-bas">Görevler<span class="sayi">' + acik.length + ' açık</span></div>';
+    sol += acik.length
+      ? '<div class="liste">' + acik.map(gorevKarti).join('') + '</div>'
+      : '<div class="liste"><div class="bilgi-satir">Hepsi bitti 🎉</div></div>';
     if (bitti.length) {
-      h += '<div class="bolum-bas">Tamamlanan (' + bitti.length + ')</div>';
-      h += '<div class="liste">' + bitti.map(gorevKarti).join('') + '</div>';
+      sol += '<div class="bolum-bas">Tamamlanan<span class="sayi">' + bitti.length + '</span></div>';
+      sol += '<div class="liste">' + bitti.map(gorevKarti).join('') + '</div>';
     }
   }
 
-  if ((b.bloklar || []).length) {
-    h += '<div class="bolum-bas">Zaman blokları</div><div class="liste">';
-    b.bloklar.forEach(bl => {
+  /* --- sağ sütun: zaman blokları + gün içi notlar --- */
+  let sag = '';
+  if (bloklar.length) {
+    sag += '<div class="bolum-bas">Zaman blokları</div><div class="liste">';
+    bloklar.forEach(bl => {
       const aktif = blokAktifMi(bl.saat);
-      h += '<div class="gorev" style="' + (aktif ? 'background:var(--vurgu-hafif)' : '') + '">' +
-        '<div class="gorev-govde">' +
-          '<div class="bolum-bas" style="margin:0 0 4px">' +
-            '<span class="saat">' + kacir(bl.saat) + '</span>' + kacir(bl.ad) +
-            (bl.konum ? '<span class="konum">' + kacir(bl.konum) + '</span>' : '') +
-          '</div>' +
-          '<div class="gorev-metin" style="font-size:14px;color:var(--soluk)">' + kacir(bl.plan || '—') + '</div>' +
-          (bl.yapilan ? '<div class="rozetler"><span class="rozet" style="color:var(--bitti)">✓ ' + kacir(bl.yapilan) + '</span></div>' : '') +
+      sag += '<div class="blok' + (aktif ? ' aktif' : '') + '">' +
+        '<div class="blok-saat">' + kacir(bl.saat) + '</div>' +
+        '<div class="blok-govde">' +
+          '<div class="blok-ad">' + kacir(bl.ad) + (bl.konum ? ' · ' + kacir(bl.konum) : '') + '</div>' +
+          '<div class="blok-plan">' + kacir(bl.plan || '—') + '</div>' +
+          (bl.yapilan ? '<div class="rozetler"><span class="rozet yesil">✓ ' + kacir(bl.yapilan) + '</span></div>' : '') +
         '</div></div>';
     });
-    h += '</div>';
+    sag += '</div>';
+  }
+  if (notlar.length) {
+    sag += '<div class="bolum-bas">Gün içi notlar</div><div class="liste">';
+    notlar.forEach(n => {
+      sag += '<div class="bilgi-satir">' +
+             (n.saat ? '<span class="saat">' + kacir(n.saat) + '</span>' : '') +
+             '<span>' + kacir(n.metin) + '</span></div>';
+    });
+    sag += '</div>';
   }
 
-  if ((b.gunIciNotlar || []).length) {
-    h += '<div class="bolum-bas">Gün içi notlar</div><div class="liste">';
-    b.gunIciNotlar.forEach(n => {
-      if (!n.metin) return;
-      h += '<div class="not-satir" style="padding:11px 14px">' +
-           (n.saat ? '<span class="saat">' + kacir(n.saat) + '</span>' : '') +
-           '<span>' + kacir(n.metin) + '</span></div>';
-    });
-    h += '</div>';
-  }
-  return h;
+  const ikiSutun = sag ? ' iki-sutun' : '';
+  return '<div class="duzen' + ikiSutun + '">' +
+           '<div class="sutun-ana">' + sol + '</div>' +
+           (sag ? '<div class="sutun-yan">' + sag + '</div>' : '') +
+         '</div>';
 }
 
 function cizHafta() {
@@ -336,18 +353,19 @@ function cizHafta() {
   if (w.ozet) h += '<div class="ozet-kart">' + kacir(w.ozet) + '</div>';
 
   (w.oncelikler || []).forEach(o => {
-    h += '<div class="oncelik-grup"><div class="bolum-bas">' + kacir(o.etiket) + '</div><div class="liste">';
+    h += '<div class="bolum-bas">' + kacir(o.etiket) + '</div><div class="liste">';
     (o.maddeler || []).forEach((m, i) => {
       h += '<div class="oncelik-madde' + (m.bitti ? ' bitti' : '') + '">' +
-           '<span class="no">' + (i + 1) + '</span><span>' + kacir(m.metin) +
+           '<span class="no">' + (i + 1) + '</span>' +
+           '<span class="govde">' + kacir(m.metin) +
            (m.sure ? ' <span class="rozet sure">' + kacir(m.sure) + '</span>' : '') +
            '</span></div>';
     });
-    h += '</div></div>';
+    h += '</div>';
   });
 
   const bg = bugunISO();
-  h += '<div class="bolum-bas">Gün gün</div>';
+  h += '<div class="bolum-bas">Gün gün</div><div class="gun-izgara">';
   (w.gunler || []).forEach(g => {
     const bugunMu = g.tarih === bg;
     h += '<div class="hafta-gun' + (bugunMu ? ' bugun' : '') + '">' +
@@ -355,6 +373,7 @@ function cizHafta() {
       '<span class="tarih">' + kacir(g.tarih || '') + '</span></h3>' +
       '<ul>' + (g.satirlar || []).map(s => '<li>' + kacir(s) + '</li>').join('') + '</ul></div>';
   });
+  h += '</div>';
 
   if ((w.riskler || []).length) {
     h += '<div class="risk-kart"><h3>⚠️ Riskler</h3><ul>' +
@@ -395,7 +414,7 @@ function cizTakvim() {
 
   if ((t.tekrarlayan || []).length) {
     h += '<div class="bolum-bas">Yıllık / tekrarlayan</div><div class="liste">';
-    t.tekrarlayan.forEach(r => { h += '<div class="not-satir" style="padding:11px 14px"><span>' + kacir(r) + '</span></div>'; });
+    t.tekrarlayan.forEach(r => { h += '<div class="bilgi-satir"><span>' + kacir(r) + '</span></div>'; });
     h += '</div>';
   }
   return h;
@@ -411,7 +430,7 @@ function cizBiriken() {
     h += '<div class="bolum-bas">' + kacir(bol.baslik) + '</div><div class="liste">';
     maddeler.forEach(m => {
       if (m.durum === 'bilgi' || !m.id) {
-        h += '<div class="not-satir" style="padding:11px 14px"><span>' + kacir(m.metin) + '</span></div>';
+        h += '<div class="bilgi-satir"><span>' + kacir(m.metin) + '</span></div>';
         return;
       }
       const durum = durumAl(m.id, m.durum);
@@ -450,7 +469,7 @@ function ciz() {
   else if (g === 'biriken') h = cizBiriken();
   $('#icerik').innerHTML = h;
 
-  $$('#altNav button').forEach(b => b.classList.toggle('aktif', b.dataset.gorunum === g));
+  $$('#anaNav button').forEach(b => b.classList.toggle('aktif', b.dataset.gorunum === g));
   serit();
 }
 
@@ -589,7 +608,7 @@ const AyarSayfasi = {
 /* ------------------------------------------------------------------ olaylar */
 
 function baglaOlaylar() {
-  $$('#altNav button').forEach(b => b.onclick = () => {
+  $$('#anaNav button').forEach(b => b.onclick = () => {
     if (b.dataset.gorunum === 'yakala') { $('#yakalaKatman').classList.remove('gizli'); return; }
     D.gorunum = b.dataset.gorunum;
     window.scrollTo(0, 0);
