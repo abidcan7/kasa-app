@@ -153,26 +153,69 @@ function veriUrlAyir(veriUrl) {
   return veriUrl.slice(i + 1);           // yalnızca base64 gövdesi
 }
 
+/* Tuval gerçekten çizildi mi? Bozuk çözümde her piksel aynı (genelde saf siyah)
+   çıkıyor. Köşeler + merkezden örnek alıp hepsi aynı mı diye bakıyoruz. */
+function tuvalBos(ctx, g, y) {
+  const noktalar = [[1, 1], [g - 2, 1], [1, y - 2], [g - 2, y - 2], [g >> 1, y >> 1]];
+  let ilk = null;
+  for (const [x, k] of noktalar) {
+    if (x < 0 || k < 0) continue;
+    const p = ctx.getImageData(x, k, 1, 1).data;
+    const imza = p[0] + ',' + p[1] + ',' + p[2];
+    if (ilk === null) ilk = imza;
+    else if (imza !== ilk) return false;   // farklı renk bulundu → tuval dolu
+  }
+  return true;                              // hepsi aynı → şüpheli, ham dosyaya düş
+}
+
 /* Telefon fotoğrafları 3-5 MB gelir; yüklemeden önce küçültülür.
-   Böylece mobil veriyle de hızlı gider ve depo şişmez. */
+   Böylece mobil veriyle de hızlı gider ve depo şişmez.
+   null dönerse çağıran taraf ham dosyayı gönderir (kayıp olmaz). */
 function gorseliKucult(dosya, maxKenar, kalite) {
   maxKenar = maxKenar || 1600; kalite = kalite || 0.82;
-  return new Promise((coz) => {
-    const url = URL.createObjectURL(dosya);
-    const img = new Image();
-    img.onload = () => {
-      let { width: g, height: y } = img;
-      const oran = Math.min(1, maxKenar / Math.max(g, y));
-      g = Math.round(g * oran); y = Math.round(y * oran);
-      const c = document.createElement('canvas');
-      c.width = g; c.height = y;
-      c.getContext('2d').drawImage(img, 0, 0, g, y);
-      URL.revokeObjectURL(url);
-      coz(c.toDataURL('image/jpeg', kalite));
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); coz(null); };
-    img.src = url;
-  });
+  return (async () => {
+    let kaynak = null, g = 0, y = 0, temizle = null;
+
+    // 1) En güvenilir yol: createImageBitmap bitmap'i çözülmüş hâlde verir.
+    try {
+      if (typeof createImageBitmap === 'function') {
+        kaynak = await createImageBitmap(dosya);
+        g = kaynak.width; y = kaynak.height;
+        temizle = () => { try { kaynak.close && kaynak.close(); } catch (_) {} };
+      }
+    } catch (_) { kaynak = null; }
+
+    // 2) Yedek yol: <img>. ⚠️ onload YETMİYOR — bitmap henüz çözülmemiş olabiliyor
+    //    ve tuval tamamen siyah çıkıyordu (29.07 hatası, 12 görüntü kaybedildi).
+    //    decode() çözümün tamamlandığını garanti eder.
+    if (!kaynak) {
+      const url = URL.createObjectURL(dosya);
+      const img = new Image();
+      img.src = url;
+      try {
+        if (img.decode) await img.decode();
+        else await new Promise((ok, hata) => { img.onload = ok; img.onerror = hata; });
+      } catch (_) { URL.revokeObjectURL(url); return null; }
+      kaynak = img; g = img.naturalWidth; y = img.naturalHeight;
+      temizle = () => URL.revokeObjectURL(url);
+    }
+
+    if (!g || !y) { temizle && temizle(); return null; }
+
+    const oran = Math.min(1, maxKenar / Math.max(g, y));
+    g = Math.max(1, Math.round(g * oran)); y = Math.max(1, Math.round(y * oran));
+    const c = document.createElement('canvas');
+    c.width = g; c.height = y;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    try { ctx.drawImage(kaynak, 0, 0, g, y); }
+    catch (_) { temizle && temizle(); return null; }
+    temizle && temizle();
+
+    // 3) Son kontrol: tek renk çıktıysa küçültmeye güvenme, ham dosyayı gönder.
+    try { if (tuvalBos(ctx, g, y)) return null; } catch (_) { /* CORS vb. → devam */ }
+
+    return c.toDataURL('image/jpeg', kalite);
+  })();
 }
 
 const Ekler = {
@@ -182,9 +225,13 @@ const Ekler = {
     let base64, uzanti, tur, onizleme = null;
     if (dosya.type.startsWith('image/')) {
       const kucuk = await gorseliKucult(dosya);
-      const veriUrl = kucuk || (await dosyaOku(dosya));
+      const veriUrl = kucuk || (await dosyaOku(dosya));   // küçültme başarısızsa ham dosya
       base64 = veriUrlAyir(veriUrl);
-      onizleme = veriUrl; uzanti = 'jpg'; tur = 'foto';
+      onizleme = veriUrl; tur = 'foto';
+      // Ham dosyaya düşüldüyse uzantı gerçek türü yansıtsın (png'yi jpg diye kaydetme).
+      uzanti = kucuk ? 'jpg'
+             : ((/^data:image\/([a-z0-9+.-]+)/i.exec(veriUrl) || [, 'jpg'])[1]
+                 .replace('jpeg', 'jpg').toLowerCase());
     } else {
       base64 = veriUrlAyir(await dosyaOku(dosya));
       uzanti = (dosya.name.split('.').pop() || 'bin').toLowerCase();
