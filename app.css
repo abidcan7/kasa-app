@@ -700,25 +700,42 @@ h1, h2, h3 { margin: 0; font-weight: 680; letter-spacing: -.022em; }
   color:var(--soluk); text-transform:uppercase; padding-bottom:6px;
 }
 
+/* gün hücresi — Google Takvim gibi: üstte gün no, altında etiketler */
 .ay-hucre{
-  position:relative; aspect-ratio:1/1;
-  display:flex; align-items:center; justify-content:center;
-  font-size:.92em; font-weight:600; color:var(--metin-2);
-  border-radius:var(--r-sm);
+  min-height:66px; padding:3px 2px 2px;
+  border-top:2px solid transparent; border-radius:var(--r-xs);
+  overflow:hidden; display:flex; flex-direction:column; gap:1px;
 }
 .ay-hucre.bos{ visibility:hidden; }
 
-/* etkinlik olan gün */
-.ay-hucre.dolu{ color:var(--metin); font-weight:750; }
-.ay-nokta{
-  position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
-  width:5px; height:5px; border-radius:50%; background:var(--vurgu);
+.ay-gun-no{
+  font-size:.76em; font-weight:650; color:var(--soluk);
+  text-align:center; line-height:1.35; flex:0 0 auto;
 }
-.ay-nokta.cok{ width:14px; border-radius:3px; }
+
+/* etkinlik olan gün */
+.ay-hucre.dolu{ background:var(--yuzey); }
+.ay-hucre.dolu .ay-gun-no{ color:var(--metin); font-weight:750; }
+
+/* hücre içindeki etkinlik etiketi */
+.ay-etiket{
+  font-size:.57em; line-height:1.25; font-weight:600;
+  background:var(--vurgu); color:var(--vurgu-kn);
+  border-radius:3px; padding:1px 3px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ay-etiket b{ font-weight:800; opacity:.9; }
+/* tüm gün süren etkinlikler (doğum günü, tatil) daha sakin */
+.ay-etiket.tumgun{ background:var(--vurgu-yz); color:var(--vurgu); }
+.ay-artik{ font-size:.55em; font-weight:700; color:var(--soluk); padding-left:3px; }
 
 /* bugün */
-.ay-hucre.bugun{ background:var(--vurgu); color:var(--vurgu-kn); font-weight:800; }
-.ay-hucre.bugun .ay-nokta{ background:var(--vurgu-kn); }
+.ay-hucre.bugun{ border-top-color:var(--vurgu); background:var(--vurgu-yz); }
+.ay-hucre.bugun .ay-gun-no{
+  color:var(--vurgu-kn); font-weight:800;
+  background:var(--vurgu); border-radius:99px;
+  width:20px; height:20px; line-height:20px; margin:0 auto;
+}
 
 /* ızgaranın altındaki ay özeti */
 .ay-ozet{ border-top:1px solid var(--cizgi); margin-top:12px; padding:10px 2px 8px; }

@@ -687,16 +687,26 @@ function cizAyIzgarasi(etkinlikler){
 
   for (let g2 = 1; g2 <= gunSayisi; g2++) {
     const bugunMu = (yil === bugun.getFullYear() && ay === bugun.getMonth() && g2 === bugun.getDate());
-    const olay = gunler[g2];
-    h += '<div class="ay-hucre' + (bugunMu ? ' bugun' : '') + (olay ? ' dolu' : '') + '"' +
-         (olay ? ' data-gun="' + g2 + '" title="' + kacir(olay.map(o => o.baslik).join(' · ')) + '"' : '') +
-         '><span>' + g2 + '</span>' +
-         (olay ? '<i class="ay-nokta' + (olay.length > 1 ? ' cok' : '') + '"></i>' : '') +
-         '</div>';
+    const olay = gunler[g2] || [];
+    h += '<div class="ay-hucre' + (bugunMu ? ' bugun' : '') + (olay.length ? ' dolu' : '') + '"' +
+         (olay.length ? ' title="' + kacir(olay.map(o => o.baslik).join(' · ')) + '"' : '') + '>' +
+         '<div class="ay-gun-no">' + g2 + '</div>';
+
+    // Google Takvim gibi: hücrenin içinde etiketler. En fazla 2, gerisi "+N"
+    olay.slice(0, 2).forEach(e => {
+      const saatli = e.saat && e.saat !== '—';
+      h += '<div class="ay-etiket' + (saatli ? '' : ' tumgun') + '">' +
+             (saatli ? '<b>' + kacir(e.saat.split('-')[0]) + '</b> ' : '') +
+             kacir(e.baslik) +
+           '</div>';
+    });
+    if (olay.length > 2) h += '<div class="ay-artik">+' + (olay.length - 2) + '</div>';
+
+    h += '</div>';
   }
   h += '</div>';
 
-  // seçili ayın etkinlikleri — ızgaranın hemen altında özet
+  // ızgaranın altında seçili ayın tam listesi (etiketler kısaldığı için)
   const ayinlar = Object.keys(gunler).map(Number).sort((a,b) => a-b);
   if (ayinlar.length){
     h += '<div class="ay-ozet">';

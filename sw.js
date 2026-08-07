@@ -6,7 +6,7 @@
    YENİ html eşleşip düzen bozulabiliyor (28.07'de bir kez yaşandı). index.html'deki
    `?s=` sorgu parametresi de aynı sayıyla güncellenir. */
 
-const SURUM = 'kasa-v9';   // v9: aylik takvim gorunumu
+const SURUM = 'kasa-v10';   // v10: ay izgarasinda etkinlik etiketleri
 const KABUK = [
   './',
   './index.html',
