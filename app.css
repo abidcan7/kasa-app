@@ -674,3 +674,60 @@ h1, h2, h3 { margin: 0; font-weight: 680; letter-spacing: -.022em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ═══════════════════════════════ AYLIK TAKVİM GÖRÜNÜMÜ (v9) ═══════════ */
+
+.ay-kutu{
+  background:var(--kart); border:1px solid var(--cizgi);
+  border-radius:var(--r-lg); padding:14px 12px 4px;
+  margin:0 0 18px; box-shadow:var(--golge-1);
+}
+
+.ay-bas{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.ay-ad{ font-weight:750; font-size:1.02em; letter-spacing:-.01em; }
+.ay-ok{
+  width:38px; height:38px; flex:0 0 38px;
+  border:1px solid var(--cizgi); background:var(--yuzey); color:var(--metin);
+  border-radius:50%; font-size:1.3em; line-height:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.ay-ok:active{ background:var(--vurgu-yz); border-color:var(--vurgu); }
+
+.ay-izgara{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+
+.ay-gun-ad{
+  text-align:center; font-size:.7em; font-weight:700; letter-spacing:.04em;
+  color:var(--soluk); text-transform:uppercase; padding-bottom:6px;
+}
+
+.ay-hucre{
+  position:relative; aspect-ratio:1/1;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.92em; font-weight:600; color:var(--metin-2);
+  border-radius:var(--r-sm);
+}
+.ay-hucre.bos{ visibility:hidden; }
+
+/* etkinlik olan gün */
+.ay-hucre.dolu{ color:var(--metin); font-weight:750; }
+.ay-nokta{
+  position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
+  width:5px; height:5px; border-radius:50%; background:var(--vurgu);
+}
+.ay-nokta.cok{ width:14px; border-radius:3px; }
+
+/* bugün */
+.ay-hucre.bugun{ background:var(--vurgu); color:var(--vurgu-kn); font-weight:800; }
+.ay-hucre.bugun .ay-nokta{ background:var(--vurgu-kn); }
+
+/* ızgaranın altındaki ay özeti */
+.ay-ozet{ border-top:1px solid var(--cizgi); margin-top:12px; padding:10px 2px 8px; }
+.ay-ozet-satir{
+  font-size:.86em; color:var(--metin-2); padding:4px 0;
+  display:flex; gap:8px; align-items:baseline;
+}
+.ay-ozet-satir b{
+  flex:0 0 22px; text-align:right; color:var(--metin); font-weight:750;
+}
+.ay-saat{ color:var(--vurgu); font-weight:650; }
+.ay-ozet.bos-ay{ font-size:.84em; color:var(--soluk); text-align:center; padding:14px 0; }

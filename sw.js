@@ -6,7 +6,7 @@
    YENİ html eşleşip düzen bozulabiliyor (28.07'de bir kez yaşandı). index.html'deki
    `?s=` sorgu parametresi de aynı sayıyla güncellenir. */
 
-const SURUM = 'kasa-v8';   // v8: foto küçültme düzeltmesi (decode + boş tuval kontrolü)
+const SURUM = 'kasa-v9';   // v9: aylik takvim gorunumu
 const KABUK = [
   './',
   './index.html',

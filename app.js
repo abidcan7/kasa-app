@@ -38,6 +38,7 @@ const D = {
   veri: Depo.al('veri', {}),
   kuyruk: Depo.al('kuyruk', []),
   gecmis: Depo.al('gecmis', []), // gelen kutusuna yakalananlar (kart listesi)
+  ayKaydir: 0,                   // takvimde gösterilen ay (0 = bu ay)
   yerel: Depo.al('yerel', {}),   // henüz işlenmemiş yerel durum değişiklikleri
   sonCekme: Depo.al('sonCekme', null),
   senkronda: false
@@ -650,13 +651,77 @@ function cizHafta() {
   return h;
 }
 
+/* Ay ızgarası — Pazartesi başlangıçlı, etkinlik olan günler noktalı.
+   D.ayKaydir: 0 = bu ay, +1 = gelecek ay … (ok tuşlarıyla değişir) */
+function cizAyIzgarasi(etkinlikler){
+  const bugun = new Date(bugunISO() + 'T00:00:00');
+  const g = new Date(bugun.getFullYear(), bugun.getMonth() + (D.ayKaydir || 0), 1);
+  const yil = g.getFullYear(), ay = g.getMonth();
+
+  // gün → o güne düşen etkinlikler
+  const gunler = {};
+  etkinlikler.forEach(e => {
+    if (!e.tarih) return;
+    const d = new Date(e.tarih + 'T00:00:00');
+    if (d.getFullYear() === yil && d.getMonth() === ay) {
+      (gunler[d.getDate()] = gunler[d.getDate()] || []).push(e);
+    }
+  });
+
+  const AYADI = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
+                 'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const ilkGun = new Date(yil, ay, 1).getDay();          // 0=Pazar
+  const bosluk = (ilkGun + 6) % 7;                        // Pazartesi başlangıcı
+  const gunSayisi = new Date(yil, ay + 1, 0).getDate();
+
+  let h = '<div class="ay-kutu">' +
+    '<div class="ay-bas">' +
+      '<button class="ay-ok" data-ay="-1" aria-label="Önceki ay">‹</button>' +
+      '<div class="ay-ad">' + AYADI[ay] + ' ' + yil + '</div>' +
+      '<button class="ay-ok" data-ay="1" aria-label="Sonraki ay">›</button>' +
+    '</div>' +
+    '<div class="ay-izgara">';
+
+  ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'].forEach(a => { h += '<div class="ay-gun-ad">' + a + '</div>'; });
+  for (let i = 0; i < bosluk; i++) h += '<div class="ay-hucre bos"></div>';
+
+  for (let g2 = 1; g2 <= gunSayisi; g2++) {
+    const bugunMu = (yil === bugun.getFullYear() && ay === bugun.getMonth() && g2 === bugun.getDate());
+    const olay = gunler[g2];
+    h += '<div class="ay-hucre' + (bugunMu ? ' bugun' : '') + (olay ? ' dolu' : '') + '"' +
+         (olay ? ' data-gun="' + g2 + '" title="' + kacir(olay.map(o => o.baslik).join(' · ')) + '"' : '') +
+         '><span>' + g2 + '</span>' +
+         (olay ? '<i class="ay-nokta' + (olay.length > 1 ? ' cok' : '') + '"></i>' : '') +
+         '</div>';
+  }
+  h += '</div>';
+
+  // seçili ayın etkinlikleri — ızgaranın hemen altında özet
+  const ayinlar = Object.keys(gunler).map(Number).sort((a,b) => a-b);
+  if (ayinlar.length){
+    h += '<div class="ay-ozet">';
+    ayinlar.forEach(gn => gunler[gn].forEach(e => {
+      h += '<div class="ay-ozet-satir"><b>' + gn + '</b> ' +
+           (e.saat && e.saat !== '—' ? '<span class="ay-saat">' + kacir(e.saat) + '</span> ' : '') +
+           kacir(e.baslik) + '</div>';
+    }));
+    h += '</div>';
+  } else {
+    h += '<div class="ay-ozet bos-ay">Bu ayda etkinlik yok</div>';
+  }
+  return h + '</div>';
+}
+
 function cizTakvim() {
   const t = D.veri.takvim;
   if (!t) return bosDurum('📅', 'Takvim yok', 'Senkronize et.');
-  const yaklasan = (t.etkinlikler || []).filter(e => !e.gecmis);
-  if (!yaklasan.length) return bosDurum('📅', 'Yaklaşan etkinlik yok', '');
+  const tum = t.etkinlikler || [];
+  const yaklasan = tum.filter(e => !e.gecmis);
 
-  let h = '<div class="bolum-bas">Yaklaşan</div><div class="liste">';
+  let h = cizAyIzgarasi(tum);                 // ⬅️ aylık görünüm en üstte
+  if (!yaklasan.length) return h + bosDurum('📅', 'Yaklaşan etkinlik yok', '');
+
+  h += '<div class="bolum-bas">Yaklaşan</div><div class="liste">';
   yaklasan.forEach(e => {
     const fark = gunFarki(e.tarih);
     const d = e.tarih ? new Date(e.tarih + 'T00:00:00') : null;
@@ -757,6 +822,13 @@ function ciz() {
   else if (g === 'biriken') h = cizBiriken();
   else if (g === 'gelen') h = cizGelen();
   $('#icerik').innerHTML = h;
+
+  /* ay ızgarasındaki ‹ › okları — her çizimde yeniden bağlanır */
+  if (g === 'takvim') {
+    $$('#icerik .ay-ok').forEach(b => {
+      b.onclick = () => { D.ayKaydir = (D.ayKaydir || 0) + (+b.dataset.ay); ciz(); };
+    });
+  }
 
   $$('#anaNav button').forEach(b => b.classList.toggle('aktif', b.dataset.gorunum === g));
   serit();
