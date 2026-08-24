@@ -6,7 +6,7 @@
    YENİ html eşleşip düzen bozulabiliyor (28.07'de bir kez yaşandı). index.html'deki
    `?s=` sorgu parametresi de aynı sayıyla güncellenir. */
 
-const SURUM = 'kasa-v12';   // v12: Any.do gorsel dili
+const SURUM = 'kasa-v13';   // v13: Sonra butonu duzeltmesi
 const KABUK = [
   './',
   './index.html',

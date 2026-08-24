@@ -1147,7 +1147,7 @@ const ErteleSayfasi = {
 
     const sayfa = $('#gorevSayfa');
     sayfa.innerHTML = h;
-    Katman.ac('#gorevKatman');
+    $('#gorevKatman').classList.remove('gizli');
 
     $$('.ertele-secim button', sayfa).forEach(x => x.onclick = () => {
       Katman.kapat();
@@ -1164,6 +1164,7 @@ const ErteleSayfasi = {
 };
 
 const Katman = {
+  ac(secici) { const k = $(secici); if (k) k.classList.remove('gizli'); },
   kapat() { $$('.katman').forEach(k => k.classList.add('gizli')); }
 };
 
