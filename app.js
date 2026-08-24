@@ -11,7 +11,7 @@
 
 /* olcek: Kadir'in tercihi "Devasa" (28.07) — yeni cihazlarda da bu gelsin */
 const VARSAYILAN = { owner: 'abidcan7', repo: 'kasa-veri', dal: 'main', olcek: 1.65 };
-const DOSYALAR = ['meta', 'bugun', 'hafta', 'takvim', 'biriken', 'durum'];
+const DOSYALAR = ['meta', 'bugun', 'an', 'hafta', 'takvim', 'biriken', 'durum'];
 
 /* ------------------------------------------------------------------ depo */
 
@@ -807,16 +807,179 @@ function bosDurum(ikon, baslik, alt) {
          (alt ? '<div>' + kacir(alt) + '</div>' : '') + '</div>';
 }
 
+/* ----------------------------------------------------------------- An (triyaj)
+   Any.do'nun "Moment" ekranindan uyarlandi (24.08, Kadir'in istegi).
+   Gorevler tek tek karsiya cikar, dort butonla karara baglanir.
+
+   KASA farklari:
+     - 4. buton "Sil" degil ARSIVLE  -> veri kaybi yok ilkesi
+     - her kartta "kac gundur bekliyor" yazar; bu bilgi Any.do'da yok
+     - kararlar Claude'a gider ve GUNUN PLANI onlara gore kurulur */
+
+const An = {
+  kararlar: {},
+  bitti: false,
+
+  tumu() {
+    const a = D.veri.an;
+    return (a && a.sira) ? a.sira : [];
+  },
+
+  kuyruk() {
+    return this.tumu().filter(g => !this.kararlar[g.id]);
+  },
+
+  tazeMi() {
+    const a = D.veri.an;
+    return !!(a && a.sonOturum === bugunISO());
+  },
+
+  selam() {
+    const s = new Date().getHours();
+    if (s < 11) return 'Gunaydin';
+    if (s < 18) return 'Iyi gunler';
+    return 'Iyi aksamlar';
+  },
+
+  yasMetni(g) {
+    if (g.kaynakTur === 'biriken') return g.bolum ? ('Biriken - ' + g.bolum) : 'Biriken Isler';
+    const p = [];
+    if (g.ertelenme > 0) p.push(g.ertelenme + ' gundur bekliyor');
+    if (g.gorulme > 1)   p.push(g.gorulme + ' kez ertelendi');
+    if (!p.length) return 'Son tarihi yok';
+    return p.join(' \u00b7 ');
+  },
+
+  agirlik(g) {
+    if (g.ertelenme >= 14 || g.gorulme >= 6) return 'kirmizi';
+    if (g.ertelenme >= 5  || g.gorulme >= 3) return 'turuncu';
+    return 'mavi';
+  },
+
+  karar(id, karar, hedefTarih) {
+    const g = this.tumu().find(x => x.id === id);
+    if (!g) return;
+    this.kararlar[id] = karar;
+
+    Senkron.gonder('an_karar', {
+      gorevId: id, karar: karar, hedefTarih: hedefTarih || null,
+      kaynakTur: g.kaynakTur, ertelenme: g.ertelenme || 0, gorulme: g.gorulme || 0
+    }, { metin: g.metin, kaynak: g.kaynak });
+
+    if (karar === 'bitti') durumYaz(id, 'bitti');
+    if (karar === 'arsiv') durumYaz(id, 'iptal');
+
+    const etiket = { bugun: 'Bugune alindi', sonra: 'Ertelendi', bitti: 'Bitti', arsiv: 'Arsivlendi' };
+    bildir(etiket[karar] || 'Kaydedildi');
+
+    if (!this.kuyruk().length) {
+      this.bitti = true;
+      Senkron.gonder('an_bitti', { gun: bugunISO(), toplam: this.tumu().length, ozet: this.ozet() }, null);
+    }
+    ciz();
+  },
+
+  ozet() {
+    const o = { bugun: 0, sonra: 0, bitti: 0, arsiv: 0 };
+    for (const k in this.kararlar) if (o[this.kararlar[k]] !== undefined) o[this.kararlar[k]]++;
+    return o;
+  },
+
+  sifirla() { this.kararlar = {}; this.bitti = false; ciz(); }
+};
+
+function erteleSecenekleri() {
+  const iso = d => d.toISOString().slice(0, 10);
+  const art = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+  const cmt = () => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return iso(d); };
+  const pzt = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return iso(d); };
+  return [
+    { ad: 'Yarin',             is: art(1) },
+    { ad: 'Bu hafta sonu',     is: cmt()  },
+    { ad: 'Gelecek pazartesi', is: pzt()  },
+    { ad: 'Bir hafta sonra',   is: art(7) }
+  ];
+}
+
+function cizAn() {
+  const a = D.veri.an;
+  if (!a) return bosDurum('\ud83c\udf05', 'An verisi yok', 'Yukaridaki yenile dugmesine bas.');
+
+  const kalan = An.kuyruk();
+  const tum = An.tumu();
+
+  if (!kalan.length) {
+    const o = An.ozet();
+    const hic = tum.length === 0;
+    let h = '<div class="an-bitti">';
+    h += '<div class="an-tik">\u2713</div>';
+    h += '<h2>' + (hic ? 'Triyaj gerekmiyor' : 'An tamamlandi') + '</h2>';
+    if (hic) {
+      h += '<p>Devreden acik is yok \u2014 bugun temiz basliyorsun.</p>';
+    } else {
+      h += '<p>Kararlarin Claude\'a gonderildi. <b>Gun plani bunlara gore kurulacak.</b></p>';
+      h += '<div class="an-ozet">' +
+           '<div><b>' + o.bugun + '</b><span>bugun</span></div>' +
+           '<div><b>' + o.sonra + '</b><span>sonra</span></div>' +
+           '<div><b>' + o.bitti + '</b><span>bitti</span></div>' +
+           '<div><b>' + o.arsiv + '</b><span>arsiv</span></div>' +
+           '</div>';
+      h += '<button class="an-yeniden" data-an="sifirla">Bastan basla</button>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  const g = kalan[0];
+  const yapilan = tum.length - kalan.length;
+
+  let nokta = '<div class="an-noktalar">';
+  tum.forEach(x => {
+    const k = An.kararlar[x.id];
+    const sinif = k ? ('dolu ' + k) : (x.id === g.id ? 'simdi' : '');
+    nokta += '<span class="an-nokta ' + sinif + '"></span>';
+  });
+  nokta += '</div>';
+
+  let h = '<div class="an-ekran">';
+  h += '<div class="an-ust">';
+  h += '<h2 class="an-selam">' + An.selam() + '<br>Kadir,</h2>';
+  h += '<p class="an-alt">Gununu planlamak icin bir dakikani ayir</p>';
+  h += '</div>';
+  h += nokta;
+  h += '<div class="an-sayac">' + (yapilan + 1) + ' / ' + tum.length + '</div>';
+
+  h += '<div class="an-kart">';
+  h += '<span class="an-isaret ' + An.agirlik(g) + '"></span>';
+  h += '<div class="an-kart-govde">';
+  h += '<div class="an-metin">' + kacir(g.metin) + '</div>';
+  h += '<div class="an-yas ' + An.agirlik(g) + '">' + kacir(An.yasMetni(g)) + '</div>';
+  if (g.sure) h += '<div class="an-rozet"><span class="rozet sure">' + kacir(g.sure) + '</span></div>';
+  h += '</div></div>';
+
+  h += '<div class="an-butonlar" data-id="' + kacir(g.id) + '">' +
+    '<button class="an-btn bugun" data-an="bugun"><span class="an-daire">\u2193</span><b>Bugun</b></button>' +
+    '<button class="an-btn sonra" data-an="sonra"><span class="an-daire">\u2192</span><b>Sonra</b></button>' +
+    '<button class="an-btn bitti" data-an="bitti"><span class="an-daire">\u2713</span><b>Tamamlandi</b></button>' +
+    '<button class="an-btn arsiv" data-an="arsiv"><span class="an-daire">\u2715</span><b>Arsivle</b></button>' +
+    '</div>';
+
+  h += '<p class="an-ipucu">Arsivle <b>silmez</b> \u2014 iptal/devretti olarak isaretler.</p>';
+  h += '</div>';
+  return h;
+}
+
 /* ------------------------------------------------------------------- çizim */
 
-const BASLIKLAR = { bugun: 'Bugün', hafta: 'Hafta', takvim: 'Takvim', biriken: 'Biriken', gelen: 'Gelen' };
+const BASLIKLAR = { an: 'An', bugun: 'Bugün', hafta: 'Hafta', takvim: 'Takvim', biriken: 'Biriken', gelen: 'Gelen' };
 
 function ciz() {
   const g = D.gorunum;
   $('#baslik').textContent = BASLIKLAR[g] || 'KASA';
 
   let alt = '';
-  if (g === 'bugun' && D.veri.bugun) alt = D.veri.bugun.tarih + ' ' + (D.veri.bugun.gunAdi || '');
+  if (g === 'an') alt = An.tazeMi() ? 'bugün yapıldı ✓' : (An.tumu().length + ' iş karar bekliyor');
+  else if (g === 'bugun' && D.veri.bugun) alt = D.veri.bugun.tarih + ' ' + (D.veri.bugun.gunAdi || '');
   else if (g === 'hafta' && D.veri.hafta) alt = (D.veri.hafta.baslangic || '') + ' → ' + (D.veri.hafta.bitis || '');
   else if (g === 'gelen') alt = 'yakala, Claude dağıtsın';
   else if (D.sonCekme) alt = 'son senkron ' + new Date(D.sonCekme).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -826,7 +989,8 @@ function ciz() {
   $('#besteci').classList.toggle('gizli', g !== 'gelen');
 
   let h = '';
-  if (g === 'bugun') h = cizBugun();
+  if (g === 'an') h = cizAn();
+  else if (g === 'bugun') h = cizBugun();
   else if (g === 'hafta') h = cizHafta();
   else if (g === 'takvim') h = cizTakvim();
   else if (g === 'biriken') h = cizBiriken();
@@ -841,6 +1005,16 @@ function ciz() {
   }
 
   $$('#anaNav button').forEach(b => b.classList.toggle('aktif', b.dataset.gorunum === g));
+
+  /* An sekmesindeki sayi rozeti — karar bekleyen is sayisi */
+  const rz = $('#anRozet');
+  if (rz) {
+    const n = An.kuyruk().length;
+    const goster = n > 0 && !An.tazeMi();
+    rz.textContent = goster ? String(n) : '';
+    rz.classList.toggle('gizli', !goster);
+  }
+
   serit();
 }
 
@@ -953,6 +1127,42 @@ const GorevSayfasi = {
 
 /* ---------------------------------------------------------------- katmanlar */
 
+const ErteleSayfasi = {
+  ac(id) {
+    const g = An.tumu().find(x => x.id === id);
+    if (!g) return;
+    let h = '<div class="sayfa-tut"></div>';
+    h += '<div class="sayfa-ust"><h2>Ne zaman?</h2>' +
+         '<button class="kapat-btn" data-kapat aria-label="Kapat">\u2715</button></div>';
+    h += '<div class="detay-metin" style="font-size:.95em;opacity:.75">' + kacir(g.metin) + '</div>';
+    h += '<div class="ertele-secim">';
+    erteleSecenekleri().forEach(o => {
+      h += '<button data-iso="' + o.is + '">' + o.ad +
+           '<span>' + o.is.slice(8) + '.' + o.is.slice(5, 7) + '</span></button>';
+    });
+    h += '</div>';
+    h += '<label class="alan"><span class="alan-etiket">Ya da tarih se\u00e7</span>' +
+         '<input type="date" id="erteleTarih"></label>';
+    h += '<button class="birincil" id="erteleOnay">Ertele</button>';
+
+    const sayfa = $('#gorevSayfa');
+    sayfa.innerHTML = h;
+    Katman.ac('#gorevKatman');
+
+    $$('.ertele-secim button', sayfa).forEach(x => x.onclick = () => {
+      Katman.kapat();
+      An.karar(id, 'sonra', x.dataset.iso);
+    });
+    $('#erteleOnay', sayfa).onclick = () => {
+      const v = $('#erteleTarih', sayfa).value;
+      if (!v) { bildir('Tarih se\u00e7'); return; }
+      Katman.kapat();
+      An.karar(id, 'sonra', v);
+    };
+    $$('[data-kapat]', sayfa).forEach(e => e.onclick = () => Katman.kapat());
+  }
+};
+
 const Katman = {
   kapat() { $$('.katman').forEach(k => k.classList.add('gizli')); }
 };
@@ -1013,6 +1223,22 @@ function baglaOlaylar() {
   $('#senkronBtn').onclick = () => Senkron.cek();
   $('#ayarBtn').onclick = () => AyarSayfasi.ac();
   $$('[data-kapat]').forEach(e => e.onclick = () => Katman.kapat());
+
+  /* ---- An ekrani butonlari ---- */
+  $('#icerik').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-an]');
+    if (!b) return;
+    const eylem = b.dataset.an;
+
+    if (eylem === 'sifirla') { An.sifirla(); return; }
+
+    const kutu = b.closest('.an-butonlar');
+    if (!kutu) return;
+    const id = kutu.dataset.id;
+
+    if (eylem === 'sonra') { ErteleSayfasi.ac(id); return; }
+    An.karar(id, eylem);
+  });
 
   /* içerik tıklamaları (delege) */
   $('#icerik').addEventListener('click', ev => {

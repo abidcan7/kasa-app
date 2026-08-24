@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="ikon/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="ikon/icon-180.png">
-<link rel="stylesheet" href="app.css?s=7">
+<link rel="stylesheet" href="app.css?s=8">
 </head>
 <body>
 
@@ -28,6 +28,9 @@
     </div>
 
     <nav id="anaNav">
+      <button data-gorunum="an">
+        <svg viewBox="0 0 24 24" class="nav-ikon"><circle cx="12" cy="12" r="8.6"/><path d="M12 3.4v3M12 17.6v3M3.4 12h3M17.6 12h3"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg>
+        <span>An</span><span class="nav-rozet gizli" id="anRozet"></span></button>
       <button data-gorunum="bugun" class="aktif">
         <svg viewBox="0 0 24 24" class="nav-ikon"><path d="M9 11.5l2.4 2.4L20 5.3"/><path d="M20.5 12v6.8a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h10.2"/></svg>
         <span>Bugün</span></button>
@@ -180,6 +183,6 @@
 
 <div id="bildirim" class="bildirim gizli"></div>
 
-<script src="app.js?s=7"></script>
+<script src="app.js?s=8"></script>
 </body>
 </html>
