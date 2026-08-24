@@ -907,3 +907,110 @@ h1, h2, h3 { margin: 0; font-weight: 680; letter-spacing: -.022em; }
   font-size: .66rem; font-weight: 700;
   display: grid; place-items: center;
 }
+
+/* ===========================================================================
+   GÖRSEL DİL — Any.do  (24.08, Kadir: "sadece görsel dili alalım")
+   ---------------------------------------------------------------------------
+   Yapı, sekmeler ve KASA'nin mor vurgusu AYNI kaldi.
+   Degisen: beyaz zemin · golge yerine sac teli cizgi · iri-siki tipografi ·
+            daha bol bosluk · dekoratif katmanlar kapali.
+
+   GERI ALMAK ICIN: bu blogun tamamini sil. Baska hicbir yere dokunulmadi.
+   =========================================================================== */
+
+/* --- 1. Beyaz zemin: kart ile sayfa ayni renk --- */
+:root {
+  --zemin:    #ffffff;
+  --zemin-2:  #f4f4f7;
+  --kart:     #ffffff;
+  --kart-ust: #ffffff;
+  --cizgi:      #ececf0;
+  --cizgi-koyu: #dcdce3;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --zemin:    #0b0b0f;
+    --zemin-2:  #15151c;
+    --kart:     #0b0b0f;
+    --kart-ust: #12121a;
+    --cizgi:      #23232d;
+    --cizgi-koyu: #32323e;
+  }
+}
+
+/* --- 2. Dekoratif katmanlar kapali (Any.do dumduz beyaz) --- */
+body::before { opacity: 0; }
+body::after  { opacity: 0; }
+
+/* --- 3. Tipografi: iri, kalin, siki --- */
+#baslik {
+  font-size: 40px; font-weight: 800; letter-spacing: -.032em; line-height: 1.05;
+}
+.alt-baslik { font-size: 14px; opacity: .72; }
+#ustBar {
+  padding: calc(var(--guv-ust) + 22px) 20px 16px;
+  background: var(--zemin); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+
+/* --- 4. Listeler: kart degil, sac teli cizgiyle ayrilan duz satirlar --- */
+.liste {
+  border: 0; border-top: 1px solid var(--cizgi); border-bottom: 1px solid var(--cizgi);
+  border-radius: 0; box-shadow: none; background: transparent;
+}
+.liste + .liste { margin-top: 26px; }
+#icerik { padding: 8px 20px calc(126px + var(--guv-alt)); }
+
+/* satirlar: daha bol nefes */
+.gorev         { padding: 19px 2px; gap: 15px; }
+.blok          { padding: 17px 2px; gap: 15px; }
+.oncelik-madde { padding: 17px 2px; }
+.blok.aktif    { background: transparent; border-left: 3px solid var(--vurgu); padding-left: 11px; }
+
+/* --- 5. Kartlar: golge yok, ince cizgi --- */
+.ozet-kart, .hafta-gun {
+  box-shadow: none; border-color: var(--cizgi); border-radius: 18px; padding: 18px 19px;
+}
+.hafta-gun.bugun { border-color: var(--vurgu); box-shadow: inset 0 0 0 1px var(--vurgu); }
+.gun-izgara { gap: 13px; }
+
+/* --- 6. Bolum basliklari: kucuk, seyrek, sessiz --- */
+.bolum-bas {
+  font-size: 12px; letter-spacing: .1em; font-weight: 700;
+  color: var(--soluk); margin-top: 30px; margin-bottom: 4px;
+}
+.bolum-bas:first-child { margin-top: 6px; }
+.bolum-bas::before { display: none; }
+
+/* --- 7. Odak kutusu: gradyan yerine sade sol seritli alinti --- */
+.odak {
+  background: transparent; border: 0; border-left: 3px solid var(--vurgu);
+  border-radius: 0; box-shadow: none; padding: 4px 0 4px 16px; margin: 10px 0 4px;
+}
+.odak::before, .odak::after { display: none; }
+.odak .metin { font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+
+/* --- 8. Alt navigasyon: yuzen hap degil, sayfaya oturan sac teli cizgi --- */
+#yan {
+  left: 0; right: 0; bottom: 0;
+  padding: 6px 6px calc(var(--guv-alt) + 6px);
+  background: var(--zemin); backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 0; border-top: 1px solid var(--cizgi); border-radius: 0; box-shadow: none;
+}
+#anaNav .yakala .arti { box-shadow: none; }
+
+/* --- 9. Rozetler: dolgu yerine ince cerceve --- */
+.rozet {
+  background: transparent; border: 1px solid var(--cizgi-koyu); color: var(--soluk);
+  font-weight: 600;
+}
+.rozet.sure    { color: var(--vurgu);   border-color: color-mix(in srgb, var(--vurgu)   45%, transparent); background: transparent; }
+.rozet.basladi { color: var(--basladi); border-color: color-mix(in srgb, var(--basladi) 45%, transparent); background: transparent; }
+.rozet.yesil   { color: var(--bitti);   border-color: color-mix(in srgb, var(--bitti)   45%, transparent); background: transparent; }
+
+/* --- 10. Alt sayfa (katman): daha yumusak, daha genis --- */
+.sayfa { border-radius: 26px 26px 0 0; padding-top: 10px; }
+
+/* --- 11. An ekrani: beyaz zemine gore ince ayar --- */
+.an-kart, .an-butonlar { border-top-color: var(--cizgi); }
+.an-daire { box-shadow: none; }
+.an-ozet div { background: transparent; }
