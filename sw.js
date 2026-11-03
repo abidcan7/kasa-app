@@ -6,12 +6,12 @@
    YENİ html eşleşip düzen bozulabiliyor (28.07'de bir kez yaşandı). index.html'deki
    `?s=` sorgu parametresi de aynı sayıyla güncellenir. */
 
-const SURUM = 'kasa-v14';   // v14: acik tema varsayilan, olcek 1.2, bos Bugun -> An (03.11)
+const SURUM = 'kasa-v15';   // v15: index.html no-cache; v14: acik tema, olcek 1.2, bos Bugun -> An (03.11)
 const KABUK = [
   './',
   './index.html',
-  './app.css?s=11',
-  './app.js?s=11',
+  './app.css?s=12',
+  './app.js?s=12',
   './manifest.webmanifest',
   './ikon/icon.svg'
 ];
@@ -40,9 +40,15 @@ self.addEventListener('fetch', ev => {
   if (ev.request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
-  // HTML her zaman ağdan denenir (sürüm atlamalarını yakalamak için)
+  // HTML her zaman ağdan denenir (sürüm atlamalarını yakalamak için).
+  // GitHub Pages index.html'i 10 dk HTTP önbelleğiyle verir; sayfa yüklemesinde
+  // (navigate) tarayıcı önbelleğini atlayıp sunucuya sor — yoksa yeni sürüm
+  // telefona 10 dk geç düşüyor (03.11'de yaşandı).
+  const istek = ev.request.mode === 'navigate' || ev.request.destination === 'document'
+    ? new Request(ev.request, { cache: 'no-cache' })
+    : ev.request;
   ev.respondWith(
-    fetch(ev.request)
+    fetch(istek)
       .then(yanit => {
         const kopya = yanit.clone();
         caches.open(SURUM).then(c => c.put(ev.request, kopya)).catch(() => {});

@@ -1270,7 +1270,9 @@ const AyarSayfasi = {
     const dokunmatik = window.matchMedia('(pointer: coarse)').matches;
     const masaustuDuzen = window.matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)').matches;
     s.push('<br><b>Teşhis</b>');
-    s.push('Arayüz sürümü: <b>s=7</b>');
+    const srcEl = document.querySelector('script[src*="app.js"]');
+    const surum = srcEl && /s=(\d+)/.exec(srcEl.getAttribute('src')) ? 's=' + /s=(\d+)/.exec(srcEl.getAttribute('src'))[1] : '?';
+    s.push('Arayüz sürümü: <b>' + surum + '</b> · tema: ' + Tema.secim() + ' · ölçek: ' + Depo.al('olcek', VARSAYILAN.olcek));
     s.push('Viewport: <b>' + gen + 'px</b>' + (gen > 700 && dokunmatik ? ' ⚠️ (telefonda beklenen ~400px — Chrome “Masaüstü sitesi” açık olabilir)' : ''));
     s.push('Giriş: ' + (dokunmatik ? 'dokunmatik' : 'fare') + ' · Düzen: ' + (masaustuDuzen ? 'masaüstü' : 'mobil'));
     return s.join('<br>');
