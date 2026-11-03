@@ -6,12 +6,12 @@
    YENİ html eşleşip düzen bozulabiliyor (28.07'de bir kez yaşandı). index.html'deki
    `?s=` sorgu parametresi de aynı sayıyla güncellenir. */
 
-const SURUM = 'kasa-v15';   // v15: index.html no-cache; v14: acik tema, olcek 1.2, bos Bugun -> An (03.11)
+const SURUM = 'kasa-v16';   // v16: An gece yarisi tekrar sormuyor (yerel hafiza 8 sa, 05:00 oncesi onceki gun), eski hafta plani uyarisi (04.11); v15: index.html no-cache
 const KABUK = [
   './',
   './index.html',
-  './app.css?s=12',
-  './app.js?s=12',
+  './app.css?s=13',
+  './app.js?s=13',
   './manifest.webmanifest',
   './ikon/icon.svg'
 ];

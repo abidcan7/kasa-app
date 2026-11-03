@@ -65,9 +65,19 @@ function bildir(mesaj, sure) {
   bildir._z = setTimeout(() => el.classList.add('gizli'), sure || 2600);
 }
 
-function bugunISO() {
-  const t = new Date();
+function isoGun(t) {
   return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+}
+
+function bugunISO() { return isoGun(new Date()); }
+
+/* "An günü": 00:00–05:00 arası hâlâ bir önceki güne sayılır. 03.11'de An 22:46'da
+   yapıldı, 00:30'da uygulama günü değiştirip aynı kuyruğu ikinci kez sordu. */
+const AN_GUN_SINIRI = 5;
+function anGunISO() {
+  const t = new Date();
+  if (t.getHours() < AN_GUN_SINIRI) t.setDate(t.getDate() - 1);
+  return isoGun(t);
 }
 
 function yeniKimlik() {
@@ -621,6 +631,10 @@ function cizHafta() {
   const w = D.veri.hafta;
   if (!w) return bosDurum('🗓️', 'Haftalık plan yok', 'Senkronize et.');
   let h = '';
+  if (w.eski) {
+    h += '<div class="ozet-kart">Bu haftanın planı yok. Gösterilen en son plan: ' +
+         kacir(w.baslangic || '') + ' → ' + kacir(w.bitis || '') + '.</div>';
+  }
   if (w.ozet) h += '<div class="ozet-kart">' + kacir(w.ozet) + '</div>';
 
   (w.oncelikler || []).forEach(o => {
@@ -856,8 +870,19 @@ function bosGunEkrani() {
      - her kartta "kac gundur bekliyor" yazar; bu bilgi Any.do'da yok
      - kararlar Claude'a gider ve GUNUN PLANI onlara gore kurulur */
 
+/* Telefonda verilen kararlar yalnızca bellekte durmasın: sayfa yenilenince / gün
+   dönünce aynı sorular tekrar gelmesin diye son AN_HAFIZA saat boyunca yerelde tutulur.
+   Vault'tan yeni an.json gelse de (sonOturum bugüne eşit değilse) bu süre içinde
+   "yapıldı" sayılır — Claude olayları henüz işlememiş olabilir. */
+const AN_HAFIZA = 8 * 3600 * 1000;
+
+function anYerelKararlar() {
+  const k = Depo.al('anKararlar', null);
+  return (k && k.zaman && (Date.now() - k.zaman) < AN_HAFIZA && k.kararlar) ? k.kararlar : {};
+}
+
 const An = {
-  kararlar: {},
+  kararlar: anYerelKararlar(),
   bitti: false,
 
   tumu() {
@@ -871,7 +896,9 @@ const An = {
 
   tazeMi() {
     const a = D.veri.an;
-    return !!(a && a.sonOturum === bugunISO());
+    if (a && (a.sonOturum === bugunISO() || a.sonOturum === anGunISO())) return true;
+    const yerel = Depo.al('anSonOturum', 0);
+    return !!yerel && (Date.now() - yerel) < AN_HAFIZA;
   },
 
   selam() {
@@ -900,6 +927,7 @@ const An = {
     const g = this.tumu().find(x => x.id === id);
     if (!g) return;
     this.kararlar[id] = karar;
+    Depo.yaz('anKararlar', { zaman: Date.now(), kararlar: this.kararlar });
 
     Senkron.gonder('an_karar', {
       gorevId: id, karar: karar, hedefTarih: hedefTarih || null,
@@ -914,6 +942,7 @@ const An = {
 
     if (!this.kuyruk().length) {
       this.bitti = true;
+      Depo.yaz('anSonOturum', Date.now());
       Senkron.gonder('an_bitti', { gun: bugunISO(), toplam: this.tumu().length, ozet: this.ozet() }, null);
     }
     ciz();
@@ -925,7 +954,11 @@ const An = {
     return o;
   },
 
-  sifirla() { this.kararlar = {}; this.bitti = false; ciz(); }
+  sifirla() {
+    this.kararlar = {}; this.bitti = false;
+    Depo.sil('anKararlar'); Depo.sil('anSonOturum');
+    ciz();
+  }
 };
 
 function erteleSecenekleri() {
