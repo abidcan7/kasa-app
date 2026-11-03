@@ -5,7 +5,9 @@
    =========================================================================== */
 
 :root {
-  color-scheme: light dark;
+  /* Tema (03.11): varsayılan AÇIK. Koyu, JS'in <html data-tema="koyu"> yazmasıyla gelir;
+     "Sistem" seçilirse JS, telefonun ayarına göre acik/koyu'yu kendisi yazar. */
+  color-scheme: light;
 
   --zemin:       #f6f5f8;
   --zemin-2:     #eeedf2;
@@ -43,8 +45,8 @@
   --guv-alt: env(safe-area-inset-bottom, 0px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-tema="koyu"] {
+    color-scheme: dark;
     --zemin:      #0d0d12;
     --zemin-2:    #16161d;
     --kart:       #1a1a22;
@@ -72,7 +74,6 @@
     --golge-1: 0 1px 2px rgba(0,0,0,.5);
     --golge-2: 0 1px 3px rgba(0,0,0,.5), 0 10px 28px -8px rgba(0,0,0,.55);
     --golge-3: 0 14px 52px -10px rgba(0,0,0,.72);
-  }
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -100,9 +101,7 @@ body::after {
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 46%);
   opacity: .55;
 }
-@media (prefers-color-scheme: dark) {
-  body::before { opacity: .42; }
-}
+:root[data-tema="koyu"] body::before { opacity: .42; }
 
 html, body {
   margin: 0; padding: 0; min-height: 100%;
@@ -927,15 +926,13 @@ h1, h2, h3 { margin: 0; font-weight: 680; letter-spacing: -.022em; }
   --cizgi:      #ececf0;
   --cizgi-koyu: #dcdce3;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-tema="koyu"] {
     --zemin:    #0b0b0f;
     --zemin-2:  #15151c;
     --kart:     #0b0b0f;
     --kart-ust: #12121a;
     --cizgi:      #23232d;
     --cizgi-koyu: #32323e;
-  }
 }
 
 /* --- 2. Dekoratif katmanlar kapali (Any.do dumduz beyaz) --- */
@@ -1014,3 +1011,36 @@ body::after  { opacity: 0; }
 .an-kart, .an-butonlar { border-top-color: var(--cizgi); }
 .an-daire { box-shadow: none; }
 .an-ozet div { background: transparent; }
+
+/* ===========================================================================
+   03.11 — iPhone 11 ince ayarı
+   Üst bar daha sıkı; boş Bugün ekranı An'a yönlendirir; tema seçimi Ayarlar'da.
+   =========================================================================== */
+html, body { background: var(--zemin); }   /* canvas asla şeffaf kalmasın: tema her zaman bizim değişkenimizden */
+#ustBar { padding: calc(var(--guv-ust) + 10px) 20px 12px; }
+#baslik { font-size: 34px; }
+.bos-durum { padding: 36px 20px 24px; }
+.bos-sekil { width: 150px; height: 98px; margin-bottom: 14px; }
+
+/* boş durumdan An'a / Yakala'ya giden düğmeler */
+.bos-eylem {
+  display: flex; flex-direction: column; gap: 9px; margin: 22px auto 0; max-width: 340px;
+}
+.bos-eylem button {
+  width: 100%; padding: 14px 16px; border-radius: var(--r-sm); font-size: 16px; font-weight: 660;
+  background: var(--vurgu); color: var(--vurgu-kn);
+}
+.bos-eylem button.ikincil { background: var(--yuzey); color: var(--metin); border: 1px solid var(--cizgi); }
+.bos-eylem button:active { transform: scale(.985); }
+
+/* boş günde 14 günlük yakın tarihler */
+.bos-tarihler { margin-top: 10px; }
+
+/* tema seçimi (Ayarlar) */
+.tema-secim { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.tema-secim button {
+  padding: 12px 4px; border-radius: var(--r-sm); font-size: 13.5px; font-weight: 640;
+  background: var(--yuzey); color: var(--metin-2); border: 1.8px solid transparent;
+  transition: all var(--gecis);
+}
+.tema-secim button.aktif { background: var(--vurgu-yz); color: var(--vurgu); border-color: var(--vurgu); }

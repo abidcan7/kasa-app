@@ -9,8 +9,10 @@
 
 'use strict';
 
-/* olcek: Kadir'in tercihi "Devasa" (28.07) — yeni cihazlarda da bu gelsin */
-const VARSAYILAN = { owner: 'abidcan7', repo: 'kasa-veri', dal: 'main', olcek: 1.65 };
+/* olcek: 28.07'de "Devasa" (1.65) seçilmişti; iPhone 11'de fazla geldi (03.11) → "Büyük".
+   OLCEK_SURUM artınca kayıtlı değer bir kez bu varsayılana çekilir; sonra Ayarlar'dan ne seçilirse o kalır. */
+const VARSAYILAN = { owner: 'abidcan7', repo: 'kasa-veri', dal: 'main', olcek: 1.2, tema: 'acik' };
+const OLCEK_SURUM = 2;
 const DOSYALAR = ['meta', 'bugun', 'an', 'hafta', 'takvim', 'biriken', 'durum'];
 
 /* ------------------------------------------------------------------ depo */
@@ -570,7 +572,7 @@ function cizBugun() {
            '<div class="metin">' + kacir(b.odak) + '</div></div>';
   }
   if (!gorevler.length) {
-    sol += bosDurum('🎉', 'Bugün için görev yok', 'Yakala düğmesiyle ekleyebilirsin.');
+    sol += bosGunEkrani();
   } else {
     sol += '<div class="bolum-bas">Görevler<span class="sayi">' + acik.length + ' açık</span></div>';
     sol += acik.length
@@ -805,6 +807,44 @@ function bosDurum(ikon, baslik, alt) {
   return '<div class="bos-durum">' + BOS_SEKIL +
          '<b>' + kacir(baslik) + '</b>' +
          (alt ? '<div>' + kacir(alt) + '</div>' : '') + '</div>';
+}
+
+/* Bugün'de görev yoksa boş sayfa yerine: An'da bekleyen varsa oraya yönlendir,
+   14 gün içindeki sabit tarihleri göster (03.11 — plan yapılmamış günler için). */
+function bosGunEkrani() {
+  const bekleyen = An.tazeMi() ? 0 : An.kuyruk().length;
+  let h = '<div class="bos-durum">' + BOS_SEKIL;
+  if (bekleyen) {
+    h += '<b>Gün henüz planlanmadı</b>' +
+         '<div>An\'da ' + bekleyen + ' iş karar bekliyor. Önce onları Bugün / Sonra / Tamamlandı / Arşivle diye ayır; ' +
+         'günün planı o kararlara göre kurulur.</div>' +
+         '<div class="bos-eylem">' +
+           '<button data-git="an">An\'ı yap (' + bekleyen + ')</button>' +
+           '<button class="ikincil" data-git="gelen">Not / görev yakala</button>' +
+         '</div>';
+  } else {
+    h += '<b>Bugün için görev yok</b><div>Yakala düğmesiyle ekleyebilirsin.</div>' +
+         '<div class="bos-eylem"><button class="ikincil" data-git="gelen">Not / görev yakala</button></div>';
+  }
+  h += '</div>';
+
+  const t = D.veri.takvim;
+  const yakin = ((t && t.etkinlikler) || []).filter(e => {
+    const f = gunFarki(e.tarih);
+    return !e.gecmis && f != null && f >= 0 && f <= 14;
+  });
+  if (yakin.length) {
+    h += '<div class="bolum-bas">14 gün içinde</div><div class="liste bos-tarihler">';
+    yakin.forEach(e => {
+      const f = gunFarki(e.tarih);
+      const kalan = f === 0 ? 'bugün' : f === 1 ? 'yarın' : f + ' gün';
+      h += '<div class="bilgi-satir"><span class="saat">' + kacir((e.tarih || '').slice(5).replace('-', '.')) + '</span>' +
+           '<span>' + kacir(e.baslik) + (e.ilgili ? ' · ' + kacir(e.ilgili) : '') +
+           ' <span class="kalan-rozet">' + kalan + '</span></span></div>';
+    });
+    h += '</div>';
+  }
+  return h;
 }
 
 /* ----------------------------------------------------------------- An (triyaj)
@@ -1178,7 +1218,31 @@ const Olcek = {
     Depo.yaz('olcek', d);
     $$('#olcekSecim button').forEach(b => b.classList.toggle('aktif', parseFloat(b.dataset.olcek) === d));
   },
-  baslat() { this.uygula(Depo.al('olcek', VARSAYILAN.olcek)); }
+  baslat() {
+    if (Depo.al('olcekSurum', 1) < OLCEK_SURUM) { Depo.yaz('olcek', VARSAYILAN.olcek); Depo.yaz('olcekSurum', OLCEK_SURUM); }
+    this.uygula(Depo.al('olcek', VARSAYILAN.olcek));
+  }
+};
+
+/* ---------------------------------------------------------------- tema */
+/* Açık / Koyu / Sistem. CSS yalnızca <html data-tema="koyu">'yu tanır; "sistem"
+   seçiliyse telefonun ayarı buradan okunup acik/koyu olarak yazılır. */
+const Tema = {
+  sistemKoyu: window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null,
+  secim() { return Depo.al('tema', VARSAYILAN.tema); },
+  uygula(secim) {
+    const s = ['acik', 'koyu', 'sistem'].includes(secim) ? secim : VARSAYILAN.tema;
+    Depo.yaz('tema', s);
+    const koyu = s === 'koyu' || (s === 'sistem' && this.sistemKoyu && this.sistemKoyu.matches);
+    document.documentElement.dataset.tema = koyu ? 'koyu' : 'acik';
+    const m = $('#temaRenk'); if (m) m.content = koyu ? '#0b0b0f' : '#ffffff';
+    $$('#temaSecim button').forEach(b => b.classList.toggle('aktif', b.dataset.tema === s));
+  },
+  baslat() {
+    this.uygula(this.secim());
+    if (this.sistemKoyu && this.sistemKoyu.addEventListener)
+      this.sistemKoyu.addEventListener('change', () => { if (this.secim() === 'sistem') this.uygula('sistem'); });
+  }
 };
 
 const AyarSayfasi = {
@@ -1188,6 +1252,8 @@ const AyarSayfasi = {
     $('#ayarToken').value = Ayar.token;
     const d = Depo.al('olcek', VARSAYILAN.olcek);
     $$('#olcekSecim button').forEach(b => b.classList.toggle('aktif', parseFloat(b.dataset.olcek) === d));
+    const t = Tema.secim();
+    $$('#temaSecim button').forEach(b => b.classList.toggle('aktif', b.dataset.tema === t));
     $('#ayarDurum').innerHTML = mesaj ? kacir(mesaj) : this.ozet();
     $('#ayarKatman').classList.remove('gizli');
   },
@@ -1396,6 +1462,20 @@ function baglaOlaylar() {
     Olcek.uygula(b.dataset.olcek);
     bildir('Boyut: ' + b.textContent);
   });
+  $$('#temaSecim button').forEach(b => b.onclick = () => {
+    Tema.uygula(b.dataset.tema);
+    bildir('Görünüm: ' + b.textContent);
+  });
+
+  /* boş durum düğmeleri (Bugün ekranı → An / Yakala) */
+  $('#icerik').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-git]');
+    if (!b) return;
+    D.gorunum = b.dataset.git;
+    window.scrollTo(0, 0);
+    ciz();
+    if (D.gorunum === 'gelen') setTimeout(() => { const t = $('#yakalaNot'); if (t) t.focus(); }, 120);
+  });
 
   $('#ayarYenile').onclick = () => { Katman.kapat(); Senkron.cek(); };
 
@@ -1416,6 +1496,7 @@ function baglaOlaylar() {
 /* ------------------------------------------------------------------ başlat */
 
 function baslat() {
+  Tema.baslat();
   Olcek.baslat();
   baglaOlaylar();
   ciz();
