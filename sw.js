@@ -6,7 +6,7 @@
    YENİ html eşleşip düzen bozulabiliyor (28.07'de bir kez yaşandı). index.html'deki
    `?s=` sorgu parametresi de aynı sayıyla güncellenir. */
 
-const SURUM = 'kasa-v17';   // v17: iPhone uyumu — zoom yerine rem olcek, durum cubugu default, dokunma hedefleri, klavyede alt cubuk gizli, An kartinda baglam (04.11); v16: An gece yarisi tekrar sormuyor (yerel hafiza 8 sa, 05:00 oncesi onceki gun), eski hafta plani uyarisi (04.11); v15: index.html no-cache
+const SURUM = 'kasa-v18';   // v18: gorev ayrinti sayfasina kapatma dugmesi + asagi kaydirma + Escape, ayrintida baglam (04.11); v17: iPhone uyumu — zoom yerine rem olcek, durum cubugu default, dokunma hedefleri, klavyede alt cubuk gizli, An kartinda baglam (04.11); v16: An gece yarisi tekrar sormuyor (yerel hafiza 8 sa, 05:00 oncesi onceki gun), eski hafta plani uyarisi (04.11); v15: index.html no-cache
 const KABUK = [
   './',
   './index.html',

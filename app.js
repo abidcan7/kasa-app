@@ -1114,7 +1114,10 @@ const GorevSayfasi = {
     if (!g) return;
     const durum = durumAl(g.id, g.durum);
 
-    let h = '<div class="sayfa-tut"></div>';
+    let h = '<div class="sayfa-tut" data-kapat></div>';
+    h += '<div class="sayfa-ust"><h2>Görev</h2>' +
+         '<button class="kapat-btn" data-kapat aria-label="Kapat">✕</button></div>';
+    h += An.baglamHTML(g);
     h += '<div class="detay-metin">' + kacir(g.metin) + '</div>';
     if (g.sure) h += '<div class="rozetler" style="margin-bottom:14px"><span class="rozet sure">' + kacir(g.sure) + '</span></div>';
 
@@ -1161,6 +1164,7 @@ const GorevSayfasi = {
 
   bagla(g) {
     const sayfa = $('#gorevSayfa');
+    $$('[data-kapat]', sayfa).forEach(e => e.onclick = () => Katman.kapat());
 
     $$('.durum-secim button', sayfa).forEach(b => b.onclick = () => {
       const yeni = b.dataset.d;
@@ -1253,7 +1257,29 @@ const ErteleSayfasi = {
 
 const Katman = {
   ac(secici) { const k = $(secici); if (k) k.classList.remove('gizli'); },
-  kapat() { $$('.katman').forEach(k => k.classList.add('gizli')); }
+  kapat() { $$('.katman').forEach(k => k.classList.add('gizli')); },
+  /* 04.11 (v18, Kadir: "bu ekranı kapatamıyorum"): her alt sayfa üç yoldan kapanır —
+     ✕ düğmesi / tutamak, Escape, sayfanın tepesinden aşağı kaydırma. */
+  baslat() {
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') Katman.kapat(); });
+    let y0 = null, hedef = null;
+    document.addEventListener('touchstart', ev => {
+      hedef = ev.target.closest('.sayfa');
+      y0 = (hedef && hedef.scrollTop <= 0 && !ev.target.closest('input, textarea, button')) ? ev.touches[0].clientY : null;
+    }, { passive: true });
+    document.addEventListener('touchmove', ev => {
+      if (y0 === null || !hedef) return;
+      const dy = ev.touches[0].clientY - y0;
+      hedef.style.transform = dy > 0 ? 'translateY(' + Math.min(dy, 160) + 'px)' : '';
+    }, { passive: true });
+    document.addEventListener('touchend', ev => {
+      if (y0 === null || !hedef) return;
+      const dy = ev.changedTouches[0].clientY - y0;
+      hedef.style.transform = '';
+      if (dy > 90) Katman.kapat();
+      y0 = null; hedef = null;
+    }, { passive: true });
+  }
 };
 
 /* ---------------------------------------------------------------- ölçek */
@@ -1557,6 +1583,7 @@ function baglaOlaylar() {
 function baslat() {
   Tema.baslat();
   Olcek.baslat();
+  Katman.baslat();
   baglaOlaylar();
   ciz();
 

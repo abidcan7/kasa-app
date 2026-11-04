@@ -1088,3 +1088,9 @@ body.klavye #icerik { padding-bottom: 2rem; }
 /* iPhone yatay / geniş telefon: içerik kenar boşluğu güvenli alandan */
 #icerik, .besteci, .senkron-serit { padding-left: max(1.1rem, env(safe-area-inset-left)); padding-right: max(1.1rem, env(safe-area-inset-right)); }
 #yan { padding-left: max(0.35rem, env(safe-area-inset-left)); padding-right: max(0.35rem, env(safe-area-inset-right)); }
+
+/* 04.11 v18 — alt sayfa kapatma: tutamak dokunulabilir, kaydırma geçişi */
+.sayfa-tut { width: 2.4rem; height: 0.3rem; padding: 0.6rem 0; background-clip: content-box; box-sizing: content-box; margin: 0 auto 0.4rem; cursor: pointer; }
+.sayfa { transition: transform .18s ease-out; touch-action: pan-y; }
+.sayfa-ust h2 { font-size: 1.1rem; color: var(--soluk); font-weight: 650; }
+.sayfa .detay-metin { margin-top: 0.2rem; }
