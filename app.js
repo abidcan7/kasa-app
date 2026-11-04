@@ -908,6 +908,20 @@ const An = {
     return 'Iyi aksamlar';
   },
 
+  /* Bağlam satırı (Kadir, 04.11: "ne hakkında olduğunu yazmadan anlamıyorum"):
+     proje bağları (→ [[Not]]) + kaynak (defter günü ya da Biriken bölümü). */
+  baglamHTML(g) {
+    const p = (g.baglar || []).slice(0, 2).map(b => '<span>' + kacir(b) + '</span>');
+    let kaynak = '';
+    if (g.kaynakTur === 'biriken') kaynak = 'Biriken İşler' + (g.bolum ? ' · ' + g.bolum : '');
+    else {
+      const m = /(\d{4})-(\d{2})-(\d{2})\.md$/.exec(g.kaynak || '');
+      if (m) kaynak = 'Defter ' + m[3] + '.' + m[2];
+    }
+    if (kaynak) p.push('<span class="kaynak">' + kacir(kaynak) + '</span>');
+    return p.length ? '<div class="an-baglam">' + p.join('') + '</div>' : '';
+  },
+
   yasMetni(g) {
     if (g.kaynakTur === 'biriken') return g.bolum ? ('Biriken - ' + g.bolum) : 'Biriken Isler';
     const p = [];
@@ -1025,6 +1039,7 @@ function cizAn() {
   h += '<div class="an-kart">';
   h += '<span class="an-isaret ' + An.agirlik(g) + '"></span>';
   h += '<div class="an-kart-govde">';
+  h += An.baglamHTML(g);
   h += '<div class="an-metin">' + kacir(g.metin) + '</div>';
   h += '<div class="an-yas ' + An.agirlik(g) + '">' + kacir(An.yasMetni(g)) + '</div>';
   if (g.sure) h += '<div class="an-rozet"><span class="rozet sure">' + kacir(g.sure) + '</span></div>';
@@ -1242,12 +1257,15 @@ const Katman = {
 };
 
 /* ---------------------------------------------------------------- ölçek */
-/* Tüm arayüzü orantılı büyütür (yazı + düğme + boşluk). `zoom`, düzeni
-   yeniden akıttığı için transform:scale'den farklı olarak taşma yaratmaz. */
+/* Tüm arayüzü orantılı büyütür (yazı + düğme + boşluk). 04.11 (v17): `zoom` yerine
+   kök yazı boyutu — CSS'teki ölçüler rem; `--olcek` html font-size'ı çarpar.
+   `zoom` iOS Safari'de 100dvh, sabit alt çubuk ve güvenli alan paylarını yanlış
+   ölçüyordu (ayar sayfasının üstü kesiliyor, alt çubuk ekranın ortasında kalıyordu). */
 const Olcek = {
   uygula(deger) {
     const d = parseFloat(deger) || 1;
-    document.documentElement.style.zoom = d === 1 ? '' : String(d);
+    document.documentElement.style.zoom = '';
+    document.documentElement.style.setProperty('--olcek', String(d));
     Depo.yaz('olcek', d);
     $$('#olcekSecim button').forEach(b => b.classList.toggle('aktif', parseFloat(b.dataset.olcek) === d));
   },
@@ -1526,6 +1544,12 @@ function baglaOlaylar() {
   window.addEventListener('scroll', () => {
     $('#ustBar').classList.toggle('kaydirildi', window.scrollY > 4);
   }, { passive: true });
+
+  /* iOS klavyesi: bir alan odaktayken alt çubuk gizlenir (klavyenin üstünde
+     yüzüp içeriği örtmesin), odak çıkınca geri gelir. */
+  const alanMi = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.type !== 'date' && el.type !== 'time';
+  document.addEventListener('focusin',  ev => { if (alanMi(ev.target)) document.body.classList.add('klavye'); });
+  document.addEventListener('focusout', ev => { if (alanMi(ev.target)) setTimeout(() => { if (!alanMi(document.activeElement)) document.body.classList.remove('klavye'); }, 80); });
 }
 
 /* ------------------------------------------------------------------ başlat */
